@@ -52,7 +52,20 @@ Images to replace in `client/public/`:
 | `chat-icon.gif` | support-chat mascot |
 | login collage images | login screen background |
 
-## 3. Deploy
+## 3. Chart of accounts
+
+Already loaded (39 accounts for a salon / laundry / water-refilling business) from
+`server/db/seed-data/chart-of-accounts.tsv`. To change it, edit that file and re-run:
+
+```bash
+node src/db/import-chart-of-accounts.js db/seed-data/chart-of-accounts.tsv --dry-run
+node src/db/import-chart-of-accounts.js db/seed-data/chart-of-accounts.tsv
+```
+
+It matches on Account Code, so edits update in place rather than duplicating. Categories
+understood: Asset, Contra Asset, Liability, Equity, Revenue, Cost of Sales, Expense.
+
+## 4. Deploy
 
 Push to your own GitHub repo, then point a Railway (or equivalent) project at it with its
 own database. Set the same `DB_*` and `VITE_*` variables there. Migrations are **not**
@@ -71,9 +84,13 @@ and the "Sync from Source" buttons. Nothing in the running app depended on them.
   importer from a legacy site, not computed from transactions. `bootstrap.js` creates the
   table empty so the page renders instead of erroring, but it will stay empty until it is
   reimplemented against this system's own inventory movements.
-- **Chart of accounts is empty.** The GL posts to account codes (10006 Undeposited Funds,
-  24200, 30611, and so on) that the accounting modules expect to exist. Set up the chart
-  of accounts before using any accounting document, or those postings will fail.
+- **The accounting modules expect specific GL account codes.** Several post to hardcoded
+  codes carried over from the originating system (e.g. 10006 Undeposited Funds for Bank
+  Deposit, 24200/30611 for Commission Payable, 14300/21402 for Cheque VAT and withholding
+  tax, 15400/30504 for OSR fulfilment). This company chart uses a different numbering
+  scheme entirely, so those modules will fail to post until the codes are remapped. Grep
+  the server for the literals before using Deposit, Cheque, Commission Payable/Voucher or
+  OSR Fulfilment.
 - **Job types, processes and materials are empty.** Estimates cost from these, so
   production/costing needs them defined before the first estimate.
 - `align-nstdjo-master-data.js` is skipped by bootstrap: it expects the previous owner's

@@ -1,0 +1,40 @@
+Account Code	Account Name	Category	Sub-Category	Description
+1000	Cash on Hand	Asset	Current Asset	Main cash fund
+1010	Cash in Bank	Asset	Current Asset	Bank accounts
+1100	Accounts Receivable	Asset	Current Asset	Customer receivables
+1200	Inventory - Hair Products	Asset	Current Asset	Salon consumables
+1210	Inventory - Laundry Supplies	Asset	Current Asset	Detergent, conditioner
+1220	Inventory - Water Refilling Supplies	Asset	Current Asset	Filters, bottles, caps
+1300	Prepaid Expenses	Asset	Current Asset	Advance payments
+1500	Salon Equipment	Asset	Non-Current Asset	Chairs, mirrors, tools
+1510	Laundry Equipment	Asset	Non-Current Asset	Washers, dryers
+1520	Water Refilling Equipment	Asset	Non-Current Asset	Filtration machines
+1600	Furniture and Fixtures	Asset	Non-Current Asset	Tables, shelves
+1700	Leasehold Improvements	Asset	Non-Current Asset	Renovations
+1800	Accumulated Depreciation	Contra Asset	Non-Current Asset	Asset depreciation
+2000	Accounts Payable	Liability	Current Liability	Supplier obligations
+2100	Accrued Expenses	Liability	Current Liability	Unpaid expenses
+2200	Salaries Payable	Liability	Current Liability	Employee wages due
+2300	Utilities Payable	Liability	Current Liability	Bills due
+2400	Taxes Payable	Liability	Current Liability	Government taxes
+3000	Owner's Capital	Equity	Owner's Equity	Initial investment
+3100	Owner's Drawings	Equity	Owner's Equity	Owner withdrawals
+3200	Retained Earnings	Equity	Owner's Equity	Accumulated profits
+4000	Service Revenue - Hair Salon	Revenue	Income	Salon services
+4010	Service Revenue - Laundry	Revenue	Income	Laundry services
+4020	Service Revenue - Water Refilling	Revenue	Income	Water sales
+4100	Product Sales	Revenue	Income	Retail product sales
+5000	Cost of Sales - Hair	Cost of Sales	Direct Cost	Salon materials
+5010	Cost of Sales - Laundry	Cost of Sales	Direct Cost	Laundry supplies
+5020	Cost of Sales - Water	Cost of Sales	Direct Cost	Water supplies
+6000	Salaries and Wages	Expense	Operating Expense	Payroll
+6010	Staff Incentives	Expense	Operating Expense	Commissions
+6100	Rent Expense	Expense	Operating Expense	Store rent
+6110	Electricity Expense	Expense	Operating Expense	Power bills
+6120	Water Expense	Expense	Operating Expense	Water bills
+6200	Office Supplies	Expense	Operating Expense	Admin supplies
+6300	Repairs and Maintenance	Expense	Operating Expense	Equipment upkeep
+6400	Professional Fees	Expense	Operating Expense	Accounting/legal
+6500	Depreciation Expense	Expense	Operating Expense	Asset depreciation
+6600	Bank Charges	Expense	Operating Expense	Bank fees
+6700	Taxes and Licenses	Expense	Operating Expense	Permits and taxes
