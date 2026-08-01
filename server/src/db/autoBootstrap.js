@@ -48,6 +48,14 @@ async function ensureDatabaseReady() {
     if (coa.n === 0) {
       console.log('Chart of accounts is empty -- loading the seed file.');
       run('import-chart-of-accounts.js', [path.relative(SERVER_ROOT, seed)]);
+
+      // Anything that resolves an account by CODE has to run again now that the accounts
+      // exist. create-pos-category-accounts ran inside bootstrap above, against an empty
+      // chart, so every POS category was left unmapped -- which silently costs imported
+      // counter sales their entire GL entry, since revenue has nothing to split by. It is
+      // idempotent, so re-running only fills the gaps it left.
+      console.log('Re-seeding account mappings now that the chart exists.');
+      run('create-pos-category-accounts.js');
     }
   }
 
