@@ -68,6 +68,7 @@ const warrantyCertificateRoutes = require('./routes/warrantyCertificates');
 const rwipJobOrderRoutes = require('./routes/rwipJobOrders');
 const rfqcJobOrderRoutes = require('./routes/rfqcJobOrders');
 const { ensureAssignedAtColumn } = require('./db/ensureSchema');
+const { ensureDatabaseReady } = require('./db/autoBootstrap');
 const { sendTicketReminders } = require('./scripts/ticket_reminder');
 
 const app = express();
@@ -200,6 +201,9 @@ const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   try {
+    // A brand-new hosted database has no tables at all, which would make the very next call
+    // throw ER_NO_SUCH_TABLE and crash-loop the service. Set it up first if it is empty.
+    await ensureDatabaseReady();
     await ensureAssignedAtColumn();
     app.listen(PORT, () => console.log(`WVI ERP API listening on http://localhost:${PORT}`));
   } catch (error) {
