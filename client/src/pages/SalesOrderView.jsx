@@ -23,6 +23,26 @@ const STATUS_LABELS = {
   cancelled: 'Cancelled',
 };
 
+// Imported counter sales use a completely different line grid: one row per DATE, showing
+// how the day's takings split across cash, GCash and bank deposit, what is still
+// uncollected, and the VAT breakdown. None of the job/production columns below apply, so
+// the two grids are separate lists rather than one list with most cells blank.
+const DAILY_COLLECTION_COLUMNS = [
+  { key: 'sale_date', label: 'Date', render: (r) => (r.sale_date ? String(r.sale_date).slice(0, 10) : '') },
+  { key: 'cash', label: 'Cash', money: true },
+  { key: 'collected_cash', label: 'Collected Cash', money: true },
+  { key: 'gcash', label: 'GCash', money: true },
+  { key: 'collected_gcash', label: 'Collected GCash', money: true },
+  { key: 'collected_bank_deposit', label: 'Collected Bank Deposit / Collected Sales', money: true },
+  { key: 'total_daily_sales', label: 'Total Daily Sales', money: true },
+  { key: 'total_cash_to_deposit', label: 'Total Cash to be Deposited', money: true },
+  { key: 'total_gcash', label: 'Total GCash', money: true },
+  { key: 'uncollected_sales', label: 'Uncollected Sales', money: true },
+  { key: 'vat_ex', label: 'VAT EX', money: true },
+  { key: 'vat_12', label: 'VAT 12%', money: true },
+  { key: 'vat_inc', label: 'VAT (Inc.)', money: true },
+];
+
 const LINE_COLUMNS = [
   { key: 'job_type_name', label: 'Job Type' },
   { key: 'job_location_name', label: 'Job Location' },
@@ -104,6 +124,13 @@ export default function SalesOrderView() {
   if (loading || !so) return <LoadingSpinner />;
 
   const lines = so.lines || [];
+  // Imported from a POS category-sales shift report rather than raised from an Estimate:
+  // the sale is already done, so none of the production actions apply to it.
+  const isPosImport = !!so.pos_import_key;
+  const isDailyCollections = so.sales_layout === 'daily_collections';
+  // Counter takings sit in Undeposited Funds until a Bank Deposit sweeps them, exactly like a
+  // not-deposited Customer Payment -- same button, same destination.
+  const canDeposit = isDailyCollections && so.status === 'undeposited' && !so.deposit_id;
   // "Item Delivery" only makes sense once at least one JO line has something both Built
   // and QI'd that hasn't shipped yet -- mirrors the create form's own eligibility filter,
   // so the button doesn't open onto an empty form.
@@ -115,11 +142,18 @@ export default function SalesOrderView() {
   // (fully) invoiced -- mirrors the Create SI form's own eligibility filter.
   const hasInvoiceableLine = lines.some((l) => l.job_order_id && Number(l.quantity_delivered || 0) > Number(l.quantity_invoiced || 0));
   const canEdit = can('/sales-orders', 'can_edit');
-  const subtotal = lines.reduce((s, l) => s + num(l.subtotal), 0);
-  const discountTotal = lines.reduce((s, l) => s + num(l.disc_amount), 0);
+  // The daily collections grid carries its own VAT breakdown per day, so the footer adds up
+  // those columns instead of the job-line subtotal/discount/tax fields, which it never
+  // fills -- reading the estimate-shaped fields there would show a row of zeroes.
+  const subtotal = lines.reduce((s, l) => s + num(isDailyCollections ? l.vat_ex : l.subtotal), 0);
+  const discountTotal = isDailyCollections ? 0 : lines.reduce((s, l) => s + num(l.disc_amount), 0);
   const netOfTax = subtotal - discountTotal;
-  const taxTotal = lines.reduce((s, l) => s + (num(l.subtotal) - num(l.disc_amount)) * (num(l.tax_rate) / 100), 0);
-  const totalAmount = netOfTax + taxTotal;
+  const taxTotal = isDailyCollections
+    ? lines.reduce((s, l) => s + num(l.vat_12), 0)
+    : lines.reduce((s, l) => s + (num(l.subtotal) - num(l.disc_amount)) * (num(l.tax_rate) / 100), 0);
+  const totalAmount = isDailyCollections
+    ? lines.reduce((s, l) => s + num(l.total_daily_sales), 0)
+    : netOfTax + taxTotal;
 
   return (
     <div>
@@ -128,6 +162,12 @@ export default function SalesOrderView() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-sm" onClick={() => navigate('/sales-orders')}>Back</button>
           {canEdit && <button className="btn btn-sm" disabled title="Editing a Sales Order isn't implemented in this build -- amend the originating Estimate instead">Edit</button>}
+          {canDeposit && (
+            <button className="btn btn-sm btn-primary" onClick={() => navigate('/deposits/new', { state: { preselectSalesOrderId: so.id } })}>Deposit</button>
+          )}
+          {so.deposit_id && (
+            <button className="btn btn-sm" onClick={() => navigate(`/deposits/${so.deposit_id}`)}>View Deposit</button>
+          )}
           {hasDeliverableLine && <button className="btn btn-sm btn-primary" onClick={() => navigate(`/sales-orders/${id}/item-delivery/new`)}>Item Delivery</button>}
           {hasInvoiceableLine && (
             <div style={{ position: 'relative' }}>
@@ -198,12 +238,49 @@ export default function SalesOrderView() {
       </div>
 
       <div className="status-tabs" style={{ marginTop: 20 }}>
-        <button className={`status-tab ${tab === 'items' ? 'active' : ''}`} onClick={() => setTab('items')}>Items</button>
+        <button className={`status-tab ${tab === 'items' ? 'active' : ''}`} onClick={() => setTab('items')}>{isDailyCollections ? 'Daily Sales & Collections' : 'Items'}</button>
+        {isDailyCollections && (
+          <button className={`status-tab ${tab === 'gl' ? 'active' : ''}`} onClick={() => setTab('gl')}>GL Impact</button>
+        )}
         <button className={`status-tab ${tab === 'related' ? 'active' : ''}`} onClick={() => setTab('related')}>Related Records</button>
         <button className={`status-tab ${tab === 'system' ? 'active' : ''}`} onClick={() => setTab('system')}>System Info</button>
       </div>
 
-      {tab === 'items' && (
+      {tab === 'items' && isDailyCollections && (
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>{DAILY_COLLECTION_COLUMNS.map((c) => <th key={c.key}>{c.label}</th>)}</tr>
+              </thead>
+              <tbody>
+                {lines.length === 0 && (
+                  <tr><td colSpan={DAILY_COLLECTION_COLUMNS.length} className="muted" style={{ textAlign: 'center', padding: 20 }}>No days recorded.</td></tr>
+                )}
+                {lines.map((l) => (
+                  <tr key={l.id}>
+                    {DAILY_COLLECTION_COLUMNS.map((c) => (
+                      <td key={c.key}>{c.render ? c.render(l) : (c.money ? money(l[c.key]) : l[c.key])}</td>
+                    ))}
+                  </tr>
+                ))}
+                {lines.length > 0 && (
+                  <tr>
+                    <td><strong>Total</strong></td>
+                    {DAILY_COLLECTION_COLUMNS.slice(1).map((c) => (
+                      <td key={c.key}>
+                        <strong>{money(lines.reduce((s, l) => s + Number(l[c.key] || 0), 0))}</strong>
+                      </td>
+                    ))}
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'items' && !isDailyCollections && (
         <div className="card">
           <div className="table-wrap">
             <table>
@@ -220,6 +297,10 @@ export default function SalesOrderView() {
                         <button type="button" className="link-btn" onClick={() => navigate(`/job-orders/${l.job_order_id}`)}>
                           {l.job_order_no}
                         </button>
+                      ) : isPosImport ? (
+                        // Counter sales imported from a POS shift report are already
+                        // complete -- there is no production work to raise a JO for.
+                        <span className="muted">—</span>
                       ) : (
                         <button type="button" className="link-btn" disabled={creatingLineId === l.id} onClick={() => handleCreateJo(l.id)}>
                           {creatingLineId === l.id ? 'Creating...' : 'Create JO'}
@@ -229,6 +310,43 @@ export default function SalesOrderView() {
                     {LINE_COLUMNS.map((c) => <td key={c.key}>{c.render ? c.render(l) : l[c.key]}</td>)}
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'gl' && (
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Account Code</th><th>Account Title</th><th>Debit</th><th>Credit</th></tr>
+              </thead>
+              <tbody>
+                {(!so.gl_impact || so.gl_impact.length === 0) && (
+                  <tr>
+                    <td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 20 }}>
+                      No GL impact. This needs an "Undeposited Funds" (or Accounts Receivable) account,
+                      and every POS category on the order mapped to a revenue account.
+                    </td>
+                  </tr>
+                )}
+                {(so.gl_impact || []).map((row, idx) => (
+                  <tr key={idx}>
+                    <td>{row.account_code}</td>
+                    <td>{row.account_name}</td>
+                    <td>{row.debit ? money(row.debit) : ''}</td>
+                    <td>{row.credit ? money(row.credit) : ''}</td>
+                  </tr>
+                ))}
+                {so.gl_impact?.length > 0 && (
+                  <tr>
+                    <td /><td />
+                    <td><strong>{money(so.gl_impact.reduce((s, r) => s + Number(r.debit || 0), 0))}</strong></td>
+                    <td><strong>{money(so.gl_impact.reduce((s, r) => s + Number(r.credit || 0), 0))}</strong></td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

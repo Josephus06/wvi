@@ -49,7 +49,7 @@ export default function EstimatePrint() {
 
       <div className="print-sheet">
         <div className="print-letterhead">
-          <div className="print-logo">GSUITE ERP</div>
+          <div className="print-logo">WVI ERP</div>
           <div className="print-company-address">
             <strong>{COMPANY.name}</strong><br />
             {COMPANY.addressLine1}{COMPANY.addressLine1 && <br />}

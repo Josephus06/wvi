@@ -156,9 +156,9 @@ export default function PmsJobTypes() {
             </div>
             <div className="field-row">
               <div className="field">
-                <label>Gsuite - Job Type</label>
+                <label>WVI - Job Type</label>
                 <EntityPicker
-                  label="GSUITE Job Type" items={jobTypes} value={form.job_type_id} getLabel={jobTypeLabel}
+                  label="WVI Job Type" items={jobTypes} value={form.job_type_id} getLabel={jobTypeLabel}
                   columns={[{ key: 'display_name', label: 'Display Name' }]} searchKeys={['display_name']}
                   onSelect={(jt) => setForm({ ...form, job_type_id: jt.id })}
                 />

@@ -64,6 +64,11 @@ const STEPS = [
   ['create-deposits.js', 'bank deposits'],
   ['create-cheques.js', 'cheques'],
   ['create-fund-transfers.js', 'fund transfers'],
+  ['alter-vendor-bills-standalone.js', 'standalone (expense) vendor bills'],
+  ['alter-sales-orders-pos-import.js', 'POS category-sales PDF import into sales orders'],
+  ['alter-sales-orders-daily-collections.js', 'daily cash & collections sales order layout'],
+  ['create-pos-category-accounts.js', 'POS category to revenue account mapping'],
+  ['alter-sales-orders-deposit.js', 'undeposited/deposited counter sales'],
   ['create-accounting-periods.js', 'accounting periods'],
   ['register-ar-aging-page.js', 'A/R aging report page'],
 

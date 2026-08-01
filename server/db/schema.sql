@@ -1,5 +1,5 @@
 -- =====================================================================
--- GSUITE ERP — DATABASE SCHEMA
+-- WVI ERP — DATABASE SCHEMA
 -- Sourced from graphicstar_erp_schema (1).sql, Sections 1-6.
 -- NOTE: the source file was truncated mid-definition inside
 -- `transaction_setting_lines` (Section 6) and Sections 7 (Costing) and

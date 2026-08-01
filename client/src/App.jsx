@@ -21,6 +21,7 @@ import EstimateView from './pages/EstimateView';
 import EstimateWizard from './pages/EstimateWizard';
 import EstimatePrint from './pages/EstimatePrint';
 import SalesOrders from './pages/SalesOrders';
+import SalesOrderImport from './pages/SalesOrderImport';
 import SalesOrderView from './pages/SalesOrderView';
 import JobOrders from './pages/JobOrders';
 import JobOrderView from './pages/JobOrderView';
@@ -101,6 +102,7 @@ import ReceivingReportView from './pages/ReceivingReportView';
 import PurchaseReturnEdit from './pages/PurchaseReturnEdit';
 import PurchaseReturnView from './pages/PurchaseReturnView';
 import VendorBills from './pages/VendorBills';
+import VendorBillCreate from './pages/VendorBillCreate';
 import VendorBillView from './pages/VendorBillView';
 import BillPayments from './pages/BillPayments';
 import BillPaymentView from './pages/BillPaymentView';
@@ -182,6 +184,7 @@ function App() {
         <Route path="/estimates/:id" element={<EstimateView />} />
         <Route path="/estimates/:id/print" element={<EstimatePrint />} />
         <Route path="/sales-orders" element={<SalesOrders />} />
+        <Route path="/sales-orders/import" element={<SalesOrderImport />} />
         <Route path="/sales-orders/:id" element={<SalesOrderView />} />
         <Route path="/non-standard-job-orders" element={<NonStandardJobOrders />} />
         <Route path="/non-standard-job-orders/:id" element={<NonStandardJobOrderView />} />
@@ -286,6 +289,7 @@ function App() {
         <Route path="/purchase-orders/returns/:returnId" element={<PurchaseReturnView />} />
         <Route path="/purchase-orders/:id" element={<PurchaseOrderView />} />
         <Route path="/vendor-bills" element={<VendorBills />} />
+        <Route path="/vendor-bills/new" element={<VendorBillCreate />} />
         <Route path="/vendor-bills/:id" element={<VendorBillView />} />
         <Route path="/bill-payments" element={<BillPayments />} />
         <Route path="/bill-payments/:id" element={<BillPaymentView />} />

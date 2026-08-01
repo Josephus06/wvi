@@ -5,8 +5,11 @@ const { assertPeriodOpen } = require('../lib/accountingPeriod');
 const { computeVendorBillGl } = require('../lib/glImpact');
 
 const router = express.Router();
-// Reached from a Received Purchase Order's "Bill" button, confirmed against the real
-// system's Create Vendor Bill modal -- the AP-side counterpart to Sales Invoice.
+// Two ways in, both confirmed against the real system:
+//   - a Received Purchase Order's "Bill" button (item lines drawn from the PO), and
+//   - the Saved Vendor Bills list's "Add Vendor Bill" button (standalone expense lines
+//     against arbitrary Chart of Accounts entries, no PO at all).
+// Either way it's the AP-side counterpart to Sales Invoice and lands in the same tables.
 const ROUTE = '/vendor-bills';
 
 async function logAudit(conn, { billId, userId, eventType, fieldName = null, oldValue = null, newValue = null }) {
@@ -135,12 +138,15 @@ router.get('/', requireAuth, requirePermission(ROUTE, 'can_view'), async (req, r
     }
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
+    // LEFT JOIN, not JOIN: a standalone expense bill has no purchase_order_id and would
+    // otherwise drop out of this list entirely. Vendor comes from the PO when there is one
+    // and from the bill's own supplier_id when there isn't.
     const [rows] = await pool.query(
       `SELECT vb.id, vb.bill_no, vb.date_created, vb.date_due, vb.term, vb.gross_amount, vb.amount_due, vb.status,
               po.po_no, s.name AS supplier_name, loc.location_name AS office_location_name
        FROM vendor_bills vb
-       JOIN purchase_orders po ON po.id = vb.purchase_order_id
-       LEFT JOIN suppliers s ON s.id = po.supplier_id
+       LEFT JOIN purchase_orders po ON po.id = vb.purchase_order_id
+       LEFT JOIN suppliers s ON s.id = COALESCE(po.supplier_id, vb.supplier_id)
        LEFT JOIN locations loc ON loc.id = vb.office_location_id
        ${whereSql}
        ORDER BY vb.id DESC`,
@@ -160,8 +166,8 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
               loc.location_name AS office_location_name,
               wt.code AS wtax_code, u.display_name AS created_by_name
        FROM vendor_bills vb
-       JOIN purchase_orders po ON po.id = vb.purchase_order_id
-       LEFT JOIN suppliers s ON s.id = po.supplier_id
+       LEFT JOIN purchase_orders po ON po.id = vb.purchase_order_id
+       LEFT JOIN suppliers s ON s.id = COALESCE(po.supplier_id, vb.supplier_id)
        LEFT JOIN chart_of_accounts coa ON coa.id = vb.account_id
        LEFT JOIN locations loc ON loc.id = vb.office_location_id
        LEFT JOIN withholding_taxes wt ON wt.id = vb.wtax_id
@@ -171,12 +177,17 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
     );
     if (!vb) return res.status(404).json({ error: 'Not found' });
 
+    // line_account_* is the expense line's own debit account (NULL on PO-derived item
+    // lines) -- aliased rather than account_code/account_name so it can't collide with the
+    // header's own account columns selected above.
     const [lines] = await pool.query(
       `SELECT vbl.*, i.item_code, i.display_name AS item_name, pol.purchase_description, pol.unit_title,
-              loc.location_name, d.name AS department_name, t.code AS tax_code
+              loc.location_name, d.name AS department_name, t.code AS tax_code,
+              lca.account_code AS line_account_code, lca.account_name AS line_account_name
        FROM vendor_bill_lines vbl
        LEFT JOIN inventories i ON i.id = vbl.item_id
        LEFT JOIN purchase_order_lines pol ON pol.id = vbl.purchase_order_line_id
+       LEFT JOIN chart_of_accounts lca ON lca.id = vbl.account_id
        LEFT JOIN locations loc ON loc.id = vbl.location_id
        LEFT JOIN departments d ON d.id = vbl.department_id
        LEFT JOIN taxes t ON t.id = vbl.tax_code_id
@@ -226,6 +237,131 @@ router.get('/:id/audit-logs', requireAuth, requirePermission(ROUTE, 'can_view'),
   }
 });
 
+// The standalone "Add Vendor Bill" form's Save. No PO, so nothing to move billed_qty on and
+// no item lines -- each line is an expense booked straight to a Chart of Accounts entry
+// (Account Code / Account Title / Description / Department / Amount / Tax Code on the real
+// screen). Amount is the line's net-of-tax figure; tax and withholding are derived from it
+// server-side, never trusted from the client, same discipline as the PO-based path below.
+// Stored in vendor_bill_lines with qty = 1 and unit_price = amount so every downstream
+// consumer (Bill Payment, Bill Credit, aging) reads the same money columns either way.
+async function createExpenseBill(req, res, conn) {
+  const {
+    supplier_id: supplierId, date_created: dateCreated, term_id: termId, reference_no: referenceNo,
+    account_id: accountId, office_location_id: officeLocationId, memo, wtax_id: wtaxId,
+    expense_lines: submittedLines,
+  } = req.body;
+
+  if (!supplierId) return res.status(400).json({ error: 'Vendor is required.' });
+
+  const submitted = (Array.isArray(submittedLines) ? submittedLines : [])
+    .filter((l) => l.account_id && Number(l.amount) > 0);
+  if (!submitted.length) return res.status(400).json({ error: 'Add at least one expense line.' });
+
+  const billDate = dateCreated || new Date().toISOString().slice(0, 10);
+  await assertPeriodOpen(billDate, 'ap', conn);
+
+  const [[supplier]] = await conn.query('SELECT id FROM suppliers WHERE id = ?', [supplierId]);
+  if (!supplier) return res.status(400).json({ error: 'Vendor not found.' });
+
+  // Term drives Date Due the same way the PO-based modal does (date + the term's no_of_days),
+  // resolved here rather than taking the client's arithmetic on trust.
+  let termName = null;
+  let dateDue = billDate;
+  if (termId) {
+    const [[term]] = await conn.query('SELECT term_name, no_of_days FROM payment_terms WHERE id = ?', [termId]);
+    if (!term) return res.status(400).json({ error: 'Term not found.' });
+    termName = term.term_name;
+    const d = new Date(billDate);
+    d.setDate(d.getDate() + Number(term.no_of_days || 0));
+    dateDue = d.toISOString().slice(0, 10);
+  }
+
+  const taxIds = [...new Set(submitted.map((l) => l.tax_code_id).filter(Boolean))];
+  const taxRateById = new Map();
+  if (taxIds.length) {
+    const [taxes] = await conn.query('SELECT id, rate FROM taxes WHERE id IN (?)', [taxIds]);
+    for (const t of taxes) taxRateById.set(t.id, Number(t.rate) || 0);
+  }
+
+  let wtaxRate = 0;
+  let wtaxDescription = null;
+  if (wtaxId) {
+    const [[wt]] = await conn.query('SELECT name, rate FROM withholding_taxes WHERE id = ?', [wtaxId]);
+    if (!wt) return res.status(400).json({ error: 'Withholding Tax not found.' });
+    wtaxRate = Number(wt.rate) || 0;
+    wtaxDescription = wt.name;
+  }
+
+  const accountIds = [...new Set(submitted.map((l) => Number(l.account_id)))];
+  const [accounts] = await conn.query('SELECT id FROM chart_of_accounts WHERE id IN (?)', [accountIds]);
+  if (accounts.length !== accountIds.length) return res.status(400).json({ error: 'One of the selected accounts no longer exists.' });
+
+  const computedLines = submitted.map((l) => {
+    const amount = Number(Number(l.amount).toFixed(2));
+    const taxRate = l.tax_code_id ? (taxRateById.get(Number(l.tax_code_id)) || 0) : 0;
+    const taxAmount = Number((amount * (taxRate / 100)).toFixed(2));
+    const grossAmount = Number((amount + taxAmount).toFixed(2));
+    const isWithhold = !!l.is_withhold;
+    const lineWtaxAmount = isWithhold ? Number((amount * wtaxRate / 100).toFixed(2)) : 0;
+    return {
+      account_id: Number(l.account_id),
+      description: l.description || null,
+      department_id: l.department_id || null,
+      tax_code_id: l.tax_code_id || null,
+      amount,
+      tax_amount: taxAmount,
+      gross_amount: grossAmount,
+      is_withhold: isWithhold,
+      wtax_amount: lineWtaxAmount,
+      amount_due: Number((grossAmount - lineWtaxAmount).toFixed(2)),
+    };
+  });
+
+  // No per-line discount on this form, so Sub Total and Net of Tax are the same figure --
+  // both stored so the header reads identically to a PO-derived bill.
+  const netOfTax = computedLines.reduce((s, l) => s + l.amount, 0);
+  const taxAmount = computedLines.reduce((s, l) => s + l.tax_amount, 0);
+  const grossAmount = computedLines.reduce((s, l) => s + l.gross_amount, 0);
+  const wtaxAmount = computedLines.reduce((s, l) => s + l.wtax_amount, 0);
+  const amountDue = grossAmount - wtaxAmount;
+
+  await conn.beginTransaction();
+  const [result] = await conn.query(
+    `INSERT INTO vendor_bills
+       (bill_no, purchase_order_id, supplier_id, date_created, date_due, term, reference_no, account_id,
+        office_location_id, memo, subtotal, discount_amount, net_of_tax, tax_amount, gross_amount,
+        wtax_id, wtax_description, wtax_amount, amount_due, created_by_user_id)
+     VALUES ('', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      supplierId, billDate, dateDue, termName, referenceNo || null, accountId || null,
+      officeLocationId || null, memo || null, netOfTax, netOfTax, taxAmount, grossAmount,
+      wtaxId || null, wtaxDescription, wtaxAmount, amountDue, req.user.id,
+    ]
+  );
+  const billId = result.insertId;
+  await conn.query('UPDATE vendor_bills SET bill_no = ? WHERE id = ?', [`VB-${billId}`, billId]);
+
+  for (const l of computedLines) {
+    await conn.query(
+      `INSERT INTO vendor_bill_lines
+         (vendor_bill_id, purchase_order_line_id, item_id, account_id, description, location_id, department_id,
+          qty, rate, unit_price, disc_percent, disc_amount, net_of_tax, tax_code_id, tax_amount, ext_price,
+          is_withhold, wtax_amount, amount_due)
+       VALUES (?, NULL, NULL, ?, ?, NULL, ?, 1, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        billId, l.account_id, l.description, l.department_id, l.amount, l.amount, l.amount,
+        l.tax_code_id, l.tax_amount, l.gross_amount, l.is_withhold, l.wtax_amount, l.amount_due,
+      ]
+    );
+  }
+
+  await logAudit(conn, { billId, userId: req.user.id, eventType: 'Created', fieldName: 'bill_no', newValue: `VB-${billId}` });
+  await conn.commit();
+
+  const [[row]] = await pool.query('SELECT * FROM vendor_bills WHERE id = ?', [billId]);
+  return res.status(201).json(row);
+}
+
 // Saving marks each included PO line's billed_qty forward by exactly the qty caught up in
 // *this* transaction (never the line's full received qty) -- same running-total discipline
 // as Sales Invoice/Item Delivery, so cancelling a Bill can subtract exactly this back out.
@@ -239,7 +375,10 @@ router.post('/', requireAuth, requirePermission(ROUTE, 'can_add'), async (req, r
       reference_no: referenceNo, account_id: accountId, office_location_id: officeLocationId, memo,
       wtax_id: wtaxId, lines: submittedLines,
     } = req.body;
-    if (!purchaseOrderId) return res.status(400).json({ error: 'Purchase Order is required.' });
+    // No PO means this came from the standalone "Add Vendor Bill" form -- expense lines, not
+    // PO item lines. Same endpoint so both kinds go through one permission check and one
+    // numbering sequence.
+    if (!purchaseOrderId) return await createExpenseBill(req, res, conn);
 
     const submitted = (Array.isArray(submittedLines) ? submittedLines : [])
       .filter((l) => l.purchase_order_line_id && Number(l.qty) > 0);
@@ -362,14 +501,16 @@ router.put('/:id/cancel', requireAuth, requirePermission(ROUTE, 'can_edit'), asy
     const [lines] = await conn.query('SELECT purchase_order_line_id, qty FROM vendor_bill_lines WHERE vendor_bill_id = ?', [req.params.id]);
 
     await conn.beginTransaction();
+    // A standalone expense bill has no PO lines to give qty back to -- only the status flips.
     for (const l of lines) {
+      if (!l.purchase_order_line_id) continue;
       await conn.query('UPDATE purchase_order_lines SET billed_qty = GREATEST(billed_qty - ?, 0) WHERE id = ?', [l.qty, l.purchase_order_line_id]);
     }
     await conn.query(
       "UPDATE vendor_bills SET status = 'cancelled', cancelled_by_user_id = ?, cancelled_at = NOW() WHERE id = ?",
       [req.user.id, req.params.id]
     );
-    await recomputePoBillStatus(conn, vb.purchase_order_id);
+    if (vb.purchase_order_id) await recomputePoBillStatus(conn, vb.purchase_order_id);
     await logAudit(conn, { billId: req.params.id, userId: req.user.id, eventType: 'Cancelled', fieldName: 'status', oldValue: 'open', newValue: 'cancelled' });
     await conn.commit();
 

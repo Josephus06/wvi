@@ -89,13 +89,13 @@ async function seedAdmin(pageIds) {
     const [empResult] = await pool.query(
       `INSERT INTO employees (employee_code, first_name, last_name, position_title, email)
        VALUES (?, ?, ?, ?, ?)`,
-      ['EMP-0001', 'System', 'Administrator', 'Administrator', 'admin@gsuite.local']
+      ['EMP-0001', 'System', 'Administrator', 'Administrator', 'admin@wvi.local']
     );
     const passwordHash = await bcrypt.hash('Admin123!', 10);
     const [userResult] = await pool.query(
       `INSERT INTO users (employee_id, username, email, password_hash, display_name)
        VALUES (?, ?, ?, ?, ?)`,
-      [empResult.insertId, 'admin', 'admin@gsuite.local', passwordHash, 'System Administrator']
+      [empResult.insertId, 'admin', 'admin@wvi.local', passwordHash, 'System Administrator']
     );
     userId = userResult.insertId;
     console.log('Created admin user -> username: admin / password: Admin123!');

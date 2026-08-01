@@ -15,11 +15,15 @@ export default function DepositForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const preselectId = location.state?.preselectPaymentId;
+  const preselectSalesOrderId = location.state?.preselectSalesOrderId;
   const [meta, setMeta] = useState(null);
   const [date, setDate] = useState(today());
   const [accountId, setAccountId] = useState('');
   const [memo, setMemo] = useState('');
   const [checked, setChecked] = useState({});
+  // Counter-sales orders sit in Undeposited Funds alongside customer payments and are swept
+  // by the same deposit, so they get their own tick-list rather than a separate screen.
+  const [checkedOrders, setCheckedOrders] = useState({});
   const [filters, setFilters] = useState({ trans: '', customer: '', location: '', method: '', from: '', to: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,9 +34,13 @@ export default function DepositForm() {
       setMeta(data);
       // Deposit reached from a single Customer Payment's "Deposit" button: pre-tick that payment.
       if (preselectId && (data.payments || []).some((p) => p.id === preselectId)) setChecked({ [preselectId]: true });
+      // Deposit reached from a counter-sales Sales Order's "Deposit" button: pre-tick it.
+      if (preselectSalesOrderId && (data.sales_orders || []).some((o) => o.id === preselectSalesOrderId)) {
+        setCheckedOrders({ [preselectSalesOrderId]: true });
+      }
       setLoading(false);
     }).catch((e) => { setError(e.response?.data?.error || 'Failed to load.'); setLoading(false); });
-  }, [preselectId]);
+  }, [preselectId, preselectSalesOrderId]);
 
   const setF = (patch) => setFilters((f) => ({ ...f, ...patch }));
 
@@ -49,16 +57,22 @@ export default function DepositForm() {
     });
   }, [meta, filters]);
 
-  const total = useMemo(() => (meta?.payments || []).filter((p) => checked[p.id]).reduce((s, p) => s + Number(p.payment_amount || 0), 0), [meta, checked]);
+  const paymentsTotal = useMemo(() => (meta?.payments || []).filter((p) => checked[p.id]).reduce((s, p) => s + Number(p.payment_amount || 0), 0), [meta, checked]);
+  const ordersTotal = useMemo(() => (meta?.sales_orders || []).filter((o) => checkedOrders[o.id]).reduce((s, o) => s + Number(o.total_amount || 0), 0), [meta, checkedOrders]);
+  const total = paymentsTotal + ordersTotal;
   const selectedIds = Object.keys(checked).filter((k) => checked[k]).map(Number);
+  const selectedOrderIds = Object.keys(checkedOrders).filter((k) => checkedOrders[k]).map(Number);
 
   async function save() {
     setError('');
     if (!accountId) { setError('Select a bank account to deposit into.'); return; }
-    if (!selectedIds.length) { setError('Tick at least one payment to deposit.'); return; }
+    if (!selectedIds.length && !selectedOrderIds.length) { setError('Tick at least one payment or counter-sales order to deposit.'); return; }
     setSaving(true);
     try {
-      const { data } = await api.post('/deposits', { date_created: date, account_id: accountId, memo, payment_ids: selectedIds });
+      const { data } = await api.post('/deposits', {
+        date_created: date, account_id: accountId, memo,
+        payment_ids: selectedIds, sales_order_ids: selectedOrderIds,
+      });
       navigate(`/deposits/${data.id}`);
     } catch (e) { setError(e.response?.data?.error || 'Save failed.'); setSaving(false); }
   }
@@ -100,7 +114,7 @@ export default function DepositForm() {
 
       <div className="card">
         <div className="status-tabs" style={{ marginBottom: 8 }}>
-          <button className="status-tab active">Payments {money(total)}</button>
+          <button className="status-tab active">Payments {money(paymentsTotal)}</button>
         </div>
         <div className="table-wrap">
           <table>
@@ -130,6 +144,35 @@ export default function DepositForm() {
                   <td>{p.payment_method_name}</td>
                   <td>{formatDate(p.date_created)}</td>
                   <td style={{ textAlign: 'right' }}>{money(p.payment_amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="status-tabs" style={{ marginBottom: 8 }}>
+          <button className="status-tab active">Counter Sales {money(ordersTotal)}</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th></th><th>Sales Order #</th><th>Customer</th><th>Branch</th><th>Description</th><th>Date</th><th style={{ textAlign: 'right' }}>Amount</th></tr>
+            </thead>
+            <tbody>
+              {(meta.sales_orders || []).length === 0 && (
+                <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 20 }}>No undeposited counter sales.</td></tr>
+              )}
+              {(meta.sales_orders || []).map((o) => (
+                <tr key={o.id}>
+                  <td><input type="checkbox" checked={!!checkedOrders[o.id]} onChange={(e) => setCheckedOrders((c) => ({ ...c, [o.id]: e.target.checked }))} /></td>
+                  <td>{o.sales_order_no}</td>
+                  <td>{o.customer_name}</td>
+                  <td>{o.pos_branch_code}</td>
+                  <td>{o.contract_description}</td>
+                  <td>{formatDate(o.date_created)}</td>
+                  <td style={{ textAlign: 'right' }}>{money(o.total_amount)}</td>
                 </tr>
               ))}
             </tbody>

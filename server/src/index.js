@@ -201,7 +201,7 @@ const PORT = process.env.PORT || 4000;
 async function startServer() {
   try {
     await ensureAssignedAtColumn();
-    app.listen(PORT, () => console.log(`GSUITE ERP API listening on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`WVI ERP API listening on http://localhost:${PORT}`));
   } catch (error) {
     console.error('Failed to ensure database schema:', error);
     process.exit(1);

@@ -522,18 +522,168 @@ async function computeDeliveryTicketGl(dt, lines) {
 // side input tax on the sales-side output-tax account. If/when this build ever needs
 // genuinely separate sales vs. purchase tax codes, `taxes` would need its own second
 // account field for the purchase side -- not guessing that shape now.
+// A standalone (PO-less) bill inverts the roles of the header account: there, the form's
+// own Account field IS the payable being credited (it defaults to Accounts Payable - Trade
+// on the real screen) and the debit side comes from each expense line's own account, exactly
+// like Bill Credit's lines below. So that case is routed per-line, falling back to 20100 for
+// the credit leg if the header account was left blank.
 async function computeVendorBillGl(vb, lines) {
   const [[apAcct]] = await pool.query("SELECT account_code, account_name FROM chart_of_accounts WHERE account_code = '20100'");
   const [[vatAcct]] = await pool.query("SELECT account_code, account_name FROM chart_of_accounts WHERE account_code = '14300'");
-  if (!apAcct) return [];
 
   const rows = [];
   const grossAmount = Number(vb.gross_amount) || 0;
   const netOfTax = Number(vb.net_of_tax) || 0;
   const taxAmount = Number(vb.tax_amount) || 0;
-  if (grossAmount) rows.push({ account_code: apAcct.account_code, account_name: apAcct.account_name, debit: 0, credit: grossAmount });
-  if (netOfTax && vb.account_code) rows.push({ account_code: vb.account_code, account_name: vb.account_name, debit: netOfTax, credit: 0 });
-  if (taxAmount && vatAcct) rows.push({ account_code: vatAcct.account_code, account_name: vatAcct.account_name, debit: taxAmount, credit: 0 });
+  const isExpenseBill = !vb.purchase_order_id;
+
+  // A standalone bill names its own payable account on the form, so it does not depend on
+  // the hardcoded 20100 existing -- which matters for a chart of accounts that numbers its
+  // payables differently (see SETUP.md's note on carried-over account codes).
+  const payable = isExpenseBill && vb.account_code
+    ? { account_code: vb.account_code, account_name: vb.account_name }
+    : apAcct;
+  if (!payable) return [];
+  if (grossAmount) rows.push({ ...payable, debit: 0, credit: grossAmount });
+
+  if (isExpenseBill) {
+    // Resolved from account_id here rather than relying on the caller having joined the
+    // account in -- the Reports engine passes raw vendor_bill_lines rows.
+    const byAccount = new Map(); // account_id -> net amount
+    for (const l of lines || []) {
+      if (!l.account_id) continue;
+      const amount = Number(l.net_of_tax) || 0;
+      if (!amount) continue;
+      byAccount.set(l.account_id, (byAccount.get(l.account_id) || 0) + amount);
+    }
+    if (byAccount.size) {
+      const [accts] = await pool.query('SELECT id, account_code, account_name FROM chart_of_accounts WHERE id IN (?)', [[...byAccount.keys()]]);
+      for (const acct of accts) {
+        const amount = Number((byAccount.get(acct.id) || 0).toFixed(2));
+        if (amount) rows.push({ account_code: acct.account_code, account_name: acct.account_name, debit: amount, credit: 0 });
+      }
+    }
+  } else if (netOfTax && vb.account_code) {
+    rows.push({ account_code: vb.account_code, account_name: vb.account_name, debit: netOfTax, credit: 0 });
+  }
+
+  if (taxAmount) {
+    // 14300 is the carried-over input-VAT account and isn't present in every chart (see
+    // SETUP.md). Fall back to whatever account the tax code itself names before giving up --
+    // and if there is nowhere at all to put the tax, emit nothing rather than a one-sided
+    // entry that would silently unbalance the trial balance by exactly the tax amount.
+    let taxAcct = vatAcct;
+    if (!taxAcct) {
+      const taxCodeIds = [...new Set((lines || []).map((l) => l.tax_code_id).filter(Boolean))];
+      if (taxCodeIds.length) {
+        const [[acct]] = await pool.query(
+          `SELECT coa.account_code, coa.account_name
+           FROM taxes t JOIN chart_of_accounts coa ON coa.id = t.tax_account_id
+           WHERE t.id IN (?) LIMIT 1`,
+          [taxCodeIds]
+        );
+        taxAcct = acct || null;
+      }
+    }
+    if (!taxAcct) return [];
+    rows.push({ account_code: taxAcct.account_code, account_name: taxAcct.account_name, debit: taxAmount, credit: 0 });
+  }
+  return rows;
+}
+
+// GL Impact for an imported counter-sales Sales Order. Only this kind of order posts: an
+// estimate-derived order is a promise of work, and its GL entry happens when it is invoiced.
+// A Z-Reading is the opposite -- the money was taken at the counter and there is no invoice
+// to follow, so the order itself is the accounting document.
+//
+// Follows the operator's own remarks exactly:
+//
+//   with payment                     Dr Undeposited Funds
+//   if no payment                    Dr AR Trade
+//   with payment/for laundry         Cr Service Revenue - Laundry
+//   with payment/for water refilling Cr Service Revenue - Water Refilling
+//
+// "With payment" is the part of the day's sales actually tendered (cash + GCash); anything
+// the report shows as sold but not paid is the credit portion and lands on AR Trade instead.
+// The revenue side is split by the Z-Reading's own category breakdown, routed through
+// pos_category_accounts.
+//
+// Revenue is credited GROSS -- the full day's takings, VAT included -- because the remarks
+// name only these four accounts and no output-VAT account exists in this chart. That keeps
+// the entry balanced and matches the specification exactly, but it does mean revenue carries
+// the 12% output tax instead of a separate VAT liability. Splitting it is a two-line change
+// here (credit vat_ex per category, credit vat_12 to an output-VAT account) once there is an
+// account to post the tax to.
+async function computeSalesOrderGl(so, lines) {
+  if (so.sales_layout !== 'daily_collections') return [];
+
+  const totalSales = lines.reduce((s, l) => s + (Number(l.total_daily_sales) || 0), 0);
+  if (!totalSales) return [];
+
+  const paid = lines.reduce((s, l) => s + (Number(l.cash) || 0) + (Number(l.gcash) || 0), 0);
+
+  const [[undeposited]] = await pool.query(
+    "SELECT account_code, account_name FROM chart_of_accounts WHERE account_name = 'Undeposited Funds' LIMIT 1"
+  );
+  const [[arTrade]] = await pool.query(
+    "SELECT account_code, account_name FROM chart_of_accounts WHERE account_name LIKE 'Accounts Receivable%' ORDER BY account_code LIMIT 1"
+  );
+
+  const lineIds = lines.map((l) => l.id).filter(Boolean);
+  let categoryRows = [];
+  if (lineIds.length) {
+    [categoryRows] = await pool.query(
+      `SELECT c.category_name, SUM(c.amount) AS amount, coa.account_code, coa.account_name
+       FROM sales_order_line_categories c
+       LEFT JOIN pos_category_accounts m ON m.category_name = c.category_name
+       LEFT JOIN chart_of_accounts coa ON coa.id = m.account_id
+       WHERE c.sales_order_line_id IN (?)
+       GROUP BY c.category_name, coa.account_code, coa.account_name`,
+      [lineIds]
+    );
+  }
+
+  // Without the category breakdown, or with a category nobody has mapped to a revenue
+  // account, there is no honest way to split the credit side -- report nothing rather than
+  // post revenue to a guessed account.
+  const grossByCategory = categoryRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  if (!grossByCategory) return [];
+  if (categoryRows.some((r) => !r.account_code)) return [];
+  if (!undeposited && !arTrade) return [];
+
+  const rows = [];
+  const paidPortion = Math.min(paid, totalSales);
+  const unpaidPortion = Number((totalSales - paidPortion).toFixed(2));
+  if (paidPortion && undeposited) {
+    rows.push({ account_code: undeposited.account_code, account_name: undeposited.account_name, debit: Number(paidPortion.toFixed(2)), credit: 0 });
+  }
+  if (unpaidPortion && arTrade) {
+    rows.push({ account_code: arTrade.account_code, account_name: arTrade.account_name, debit: unpaidPortion, credit: 0 });
+  }
+
+  // Each category's share of the day's sales, credited to whichever revenue account it maps
+  // to. The largest category absorbs the rounding remainder so the credits tie back to the
+  // debits to the centavo.
+  const byAccount = new Map();
+  for (const r of categoryRows) {
+    const share = (Number(r.amount) || 0) / grossByCategory;
+    const amount = Number((totalSales * share).toFixed(2));
+    const existing = byAccount.get(r.account_code)
+      || { account_code: r.account_code, account_name: r.account_name, amount: 0, gross: 0 };
+    existing.amount += amount;
+    existing.gross += Number(r.amount) || 0;
+    byAccount.set(r.account_code, existing);
+  }
+  const credited = [...byAccount.values()];
+  const drift = Number((totalSales - credited.reduce((s, a) => s + a.amount, 0)).toFixed(2));
+  if (drift && credited.length) {
+    credited.sort((a, b) => b.gross - a.gross)[0].amount += drift;
+  }
+  for (const a of credited) {
+    const amount = Number(a.amount.toFixed(2));
+    if (amount) rows.push({ account_code: a.account_code, account_name: a.account_name, debit: 0, credit: amount });
+  }
+
   return rows;
 }
 
@@ -1001,10 +1151,35 @@ async function getPostedGlLines({ toDate, fromDate }) {
        WHERE vb.status != 'cancelled' AND ${sql}`, params
     );
     for (const vb of headers) {
-      const rows = await computeVendorBillGl(vb, []);
+      // Lines matter for standalone expense bills -- their debit legs live per-line, so
+      // passing [] here would post a one-sided entry.
+      const [lines] = await pool.query('SELECT * FROM vendor_bill_lines WHERE vendor_bill_id = ?', [vb.id]);
+      const rows = await computeVendorBillGl(vb, lines);
       push(rows, {
         entry_date: vb.date_created, source_type: 'vendor_bill', source_no: vb.bill_no, source_id: vb.id, memo: vb.memo || null,
         location_id: vb.office_location_id || null, department_id: null,
+      });
+    }
+  }
+
+  // Counter Sales (Sales Orders imported from a POS Z-Reading). Only these post: an
+  // estimate-derived order is a promise of work and posts when it is invoiced, so the filter
+  // on sales_layout is what keeps ordinary orders out of the ledger.
+  //
+  // Without this section the books were one-sided: Bank Deposits above already credit 10006
+  // Undeposited Funds, but nothing was debiting it, and the revenue accounts never moved.
+  {
+    const { sql, params } = dateFilter('so.date_created');
+    const [headers] = await pool.query(
+      `SELECT so.* FROM sales_orders so
+       WHERE so.sales_layout = 'daily_collections' AND so.status != 'cancelled' AND ${sql}`, params
+    );
+    for (const so of headers) {
+      const [lines] = await pool.query('SELECT * FROM sales_order_lines WHERE sales_order_id = ?', [so.id]);
+      const rows = await computeSalesOrderGl(so, lines);
+      push(rows, {
+        entry_date: so.date_created, source_type: 'sales_order', source_no: so.sales_order_no, source_id: so.id,
+        memo: so.memo || null, location_id: so.office_location_id || null, department_id: null,
       });
     }
   }
@@ -1076,6 +1251,7 @@ module.exports = {
   computeCommissionPayableGl,
   computeCommissionVoucherGl,
   computeVendorBillGl,
+  computeSalesOrderGl,
   computeInventoryAdjustmentGl,
   computeBillCreditGl,
   getPostedGlLines,

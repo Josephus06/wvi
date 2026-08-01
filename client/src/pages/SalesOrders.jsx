@@ -5,17 +5,17 @@ import { useAuth } from '../context/useAuth';
 import Pagination from '../components/Pagination';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Mirrors Estimates.jsx / the real system's "Saved Sales Orders" list -- Sales Orders
-// are only ever generated automatically (when an estimate reaches Approved), so there
-// is no "Add" action here, just filtering/browsing/viewing.
+// Mirrors Estimates.jsx / the real system's "Saved Sales Orders" list. Orders are imported
+// from a POS Z-Reading via "Upload PDF" and run Undeposited -> Deposited as a Bank Deposit
+// sweeps the till money into the bank.
+//
+// The print-shop production stages (Pending for JO, JO In-Process, Pending Delivery,
+// Partially Delivered, Pending Billing, Billed) are deliberately not listed: this system
+// records counter sales, which never enter that pipeline. The statuses still exist on the
+// server for any estimate-derived order, but such an order is not reachable from this list.
 const STATUS_TABS = [
-  { key: 'pending_for_jo', label: 'Pending for JO' },
-  { key: 'jo_in_process', label: 'JO In-Process' },
-  { key: 'pending_delivery', label: 'Pending Delivery' },
-  { key: 'partially_delivered', label: 'Partially Delivered' },
-  { key: 'pending_billing', label: 'Pending Billing' },
-  { key: 'pending_billing_partially_delivered', label: 'Pending Billing / Partially Delivered' },
-  { key: 'billed', label: 'Billed' },
+  { key: 'undeposited', label: 'Undeposited' },
+  { key: 'deposited', label: 'Deposited' },
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -25,14 +25,16 @@ function money(v) {
 }
 
 export default function SalesOrders() {
-
+  const { can } = useAuth();
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  const [status, setStatus] = useState('pending_for_jo');
+  // Undeposited is the working queue -- till money not yet swept into the bank -- so the
+  // list opens there rather than on a status that no longer has a tab.
+  const [status, setStatus] = useState('undeposited');
   const [search, setSearch] = useState('');
   const [salesRepId, setSalesRepId] = useState('');
   const [officeLocationId, setOfficeLocationId] = useState('');
@@ -77,6 +79,9 @@ export default function SalesOrders() {
         <h1>Saved Sales Orders</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-sm" onClick={() => setShowFilters((s) => !s)}>Toggle Filter</button>
+          {can('/sales-orders', 'can_add') && (
+            <Link className="btn btn-sm btn-primary" to="/sales-orders/import">Upload PDF</Link>
+          )}
         </div>
       </div>
 

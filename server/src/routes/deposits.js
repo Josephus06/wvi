@@ -34,7 +34,19 @@ router.get('/meta', requireAuth, requirePermission(ROUTE, 'can_view'), async (re
        LEFT JOIN payment_methods pm ON pm.id = cp.payment_method_id
        WHERE cp.status = 'not_deposited' AND cp.deposit_id IS NULL ORDER BY cp.id DESC LIMIT 1000`
     );
-    res.json({ accounts, payments });
+    // Imported counter sales sit in Undeposited Funds exactly like a not-deposited Customer
+    // Payment, so the same Deposit sweeps them. total_daily_sales is what was debited to
+    // Undeposited Funds, so that is what clears out of it.
+    const [salesOrders] = await pool.query(
+      `SELECT so.id, so.sales_order_no, so.date_created, so.total_amount,
+              c.name AS customer_name, loc.location_name, so.pos_branch_code, so.contract_description
+       FROM sales_orders so
+       LEFT JOIN customers c ON c.id = so.customer_id
+       LEFT JOIN locations loc ON loc.id = so.office_location_id
+       WHERE so.sales_layout = 'daily_collections' AND so.status = 'undeposited' AND so.deposit_id IS NULL
+       ORDER BY so.id DESC LIMIT 1000`
+    );
+    res.json({ accounts, payments, sales_orders: salesOrders });
   } catch (err) { next(err); }
 });
 
@@ -71,6 +83,13 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
        WHERE cp.deposit_id = ? ORDER BY cp.id`,
       [req.params.id]
     );
+    const [salesOrders] = await pool.query(
+      `SELECT so.id, so.sales_order_no, so.date_created, so.total_amount, so.contract_description,
+              c.name AS customer_name
+       FROM sales_orders so LEFT JOIN customers c ON c.id = so.customer_id
+       WHERE so.deposit_id = ? ORDER BY so.id`,
+      [req.params.id]
+    );
     // GL Impact: DR the bank account / CR 10006 Undeposited Funds for the total.
     const [[uf]] = await pool.query("SELECT account_code, account_name FROM chart_of_accounts WHERE account_code = '10006'");
     const total = round2(d.total_amount);
@@ -78,7 +97,7 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
       { account_code: d.account_code, account_name: d.account_name, debit: total, credit: 0 },
       { account_code: uf?.account_code || '10006', account_name: uf?.account_name || 'Undeposited Funds', debit: 0, credit: total },
     ] : [];
-    res.json({ ...d, payments, gl });
+    res.json({ ...d, payments, sales_orders: salesOrders, gl });
   } catch (err) { next(err); }
 });
 
@@ -96,20 +115,46 @@ router.get('/:id/audit-logs', requireAuth, requirePermission(ROUTE, 'can_view'),
 router.post('/', requireAuth, requirePermission(ROUTE, 'can_add'), async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const { date_created: dateCreated, account_id: accountId, memo, payment_ids: paymentIds } = req.body;
+    const {
+      date_created: dateCreated, account_id: accountId, memo,
+      payment_ids: paymentIds, sales_order_ids: salesOrderIds,
+    } = req.body;
     if (!accountId) return res.status(400).json({ error: 'Select a bank account to deposit into.' });
     const ids = [...new Set((Array.isArray(paymentIds) ? paymentIds : []).map(Number).filter(Boolean))];
-    if (!ids.length) return res.status(400).json({ error: 'Select at least one payment to deposit.' });
+    const soIds = [...new Set((Array.isArray(salesOrderIds) ? salesOrderIds : []).map(Number).filter(Boolean))];
+    if (!ids.length && !soIds.length) return res.status(400).json({ error: 'Select at least one payment or counter-sales order to deposit.' });
 
-    const [pays] = await conn.query(
-      "SELECT id, payment_amount, status, deposit_id FROM customer_payments WHERE id IN (?)", [ids]
-    );
-    if (pays.length !== ids.length) return res.status(400).json({ error: 'One or more payments are no longer valid.' });
-    for (const p of pays) {
-      if (p.deposit_id || p.status === 'deposited') return res.status(409).json({ error: 'One or more payments are already deposited.' });
-      if (p.status === 'voided') return res.status(409).json({ error: 'A voided payment cannot be deposited.' });
+    let pays = [];
+    if (ids.length) {
+      [pays] = await conn.query(
+        "SELECT id, payment_amount, status, deposit_id FROM customer_payments WHERE id IN (?)", [ids]
+      );
+      if (pays.length !== ids.length) return res.status(400).json({ error: 'One or more payments are no longer valid.' });
+      for (const p of pays) {
+        if (p.deposit_id || p.status === 'deposited') return res.status(409).json({ error: 'One or more payments are already deposited.' });
+        if (p.status === 'voided') return res.status(409).json({ error: 'A voided payment cannot be deposited.' });
+      }
     }
-    const total = round2(pays.reduce((s, p) => s + num(p.payment_amount), 0));
+
+    // Counter-sales orders deposit the amount that was debited to Undeposited Funds, so the
+    // account clears exactly. Re-checked here rather than trusted from the form.
+    let orders = [];
+    if (soIds.length) {
+      [orders] = await conn.query(
+        "SELECT id, sales_order_no, total_amount, status, deposit_id, sales_layout FROM sales_orders WHERE id IN (?)", [soIds]
+      );
+      if (orders.length !== soIds.length) return res.status(400).json({ error: 'One or more counter-sales orders are no longer valid.' });
+      for (const o of orders) {
+        if (o.sales_layout !== 'daily_collections') return res.status(400).json({ error: `${o.sales_order_no} is not a counter-sales order.` });
+        if (o.deposit_id || o.status === 'deposited') return res.status(409).json({ error: `${o.sales_order_no} is already deposited.` });
+        if (o.status === 'cancelled') return res.status(409).json({ error: `${o.sales_order_no} is cancelled.` });
+      }
+    }
+
+    const total = round2(
+      pays.reduce((s, p) => s + num(p.payment_amount), 0)
+      + orders.reduce((s, o) => s + num(o.total_amount), 0)
+    );
     await assertPeriodOpen(dateCreated, 'ar');
 
     await conn.beginTransaction();
@@ -121,7 +166,8 @@ router.post('/', requireAuth, requirePermission(ROUTE, 'can_add'), async (req, r
     const depositId = r.insertId;
     const bdNo = `BD-${depositId}`;
     await conn.query('UPDATE bank_deposits SET bd_no = ? WHERE id = ?', [bdNo, depositId]);
-    await conn.query("UPDATE customer_payments SET deposit_id = ?, status = 'deposited' WHERE id IN (?)", [depositId, ids]);
+    if (ids.length) await conn.query("UPDATE customer_payments SET deposit_id = ?, status = 'deposited' WHERE id IN (?)", [depositId, ids]);
+    if (soIds.length) await conn.query("UPDATE sales_orders SET deposit_id = ?, status = 'deposited' WHERE id IN (?)", [depositId, soIds]);
     await logAudit(conn, { depositId, userId: req.user.id, eventType: 'Created', fieldName: 'bd_no', newValue: bdNo });
     await conn.commit();
     res.status(201).json({ id: depositId, bd_no: bdNo });
@@ -138,6 +184,8 @@ router.put('/:id/void', requireAuth, requirePermission(ROUTE, 'can_edit'), async
     await conn.beginTransaction();
     // Release the payments back to not-deposited so they can be deposited again.
     await conn.query("UPDATE customer_payments SET deposit_id = NULL, status = 'not_deposited' WHERE deposit_id = ?", [req.params.id]);
+    // Same for any counter-sales orders swept into this deposit -- back to undeposited.
+    await conn.query("UPDATE sales_orders SET deposit_id = NULL, status = 'undeposited' WHERE deposit_id = ?", [req.params.id]);
     await conn.query("UPDATE bank_deposits SET status = 'void', voided_at = NOW(), voided_by_user_id = ? WHERE id = ?", [req.user.id, req.params.id]);
     await logAudit(conn, { depositId: req.params.id, userId: req.user.id, eventType: 'Cancelled', fieldName: 'status', oldValue: d.status, newValue: 'void' });
     await conn.commit();

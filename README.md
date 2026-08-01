@@ -1,4 +1,4 @@
-# GSUITE ERP
+# WVI ERP
 
 A web-based ERP built on the GraphicStar ERP schema. It covers core master data and
 authentication (RBAC-secured login, employees, users & page permissions, customers,

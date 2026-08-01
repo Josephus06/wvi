@@ -1,5 +1,5 @@
 {
-  "name": "gsuite-erp",
+  "name": "wvi-erp",
   "private": true,
   "scripts": {
     "postinstall": "npm install --prefix client && npm install --prefix server",

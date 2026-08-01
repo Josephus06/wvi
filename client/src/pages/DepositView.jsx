@@ -34,6 +34,8 @@ export default function DepositView() {
 
   if (loading || !d) return <LoadingSpinner />;
   const payments = d.payments || [];
+  // Counter-sales orders swept into this deposit alongside customer payments.
+  const salesOrders = d.sales_orders || [];
   const gl = d.gl || [];
   const totalDebit = gl.reduce((s, l) => s + num(l.debit), 0);
   const totalCredit = gl.reduce((s, l) => s + num(l.credit), 0);
@@ -83,13 +85,21 @@ export default function DepositView() {
             <table>
               <thead><tr><th>Trans. #</th><th>Customer</th><th>Date Created</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
               <tbody>
-                {payments.length === 0 && <tr><td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 20 }}>No payments.</td></tr>}
+                {payments.length === 0 && salesOrders.length === 0 && <tr><td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 20 }}>No payments.</td></tr>}
                 {payments.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={`cp-${p.id}`}>
                     <td><button type="button" className="link-btn" onClick={() => navigate(`/customer-payments/${p.id}`)}>{p.customer_payment_no}</button></td>
                     <td>{p.customer_name}</td>
                     <td>{formatDate(p.date_created)}</td>
                     <td style={{ textAlign: 'right' }}>{money(p.payment_amount)}</td>
+                  </tr>
+                ))}
+                {salesOrders.map((o) => (
+                  <tr key={`so-${o.id}`}>
+                    <td><button type="button" className="link-btn" onClick={() => navigate(`/sales-orders/${o.id}`)}>{o.sales_order_no}</button></td>
+                    <td>{o.customer_name}</td>
+                    <td>{formatDate(o.date_created)}</td>
+                    <td style={{ textAlign: 'right' }}>{money(o.total_amount)}</td>
                   </tr>
                 ))}
               </tbody>

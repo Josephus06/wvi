@@ -1,40 +1,306 @@
 Account Code	Account Name	Category	Sub-Category	Description
-1000	Cash on Hand	Asset	Current Asset	Main cash fund
-1010	Cash in Bank	Asset	Current Asset	Bank accounts
-1100	Accounts Receivable	Asset	Current Asset	Customer receivables
-1200	Inventory - Hair Products	Asset	Current Asset	Salon consumables
-1210	Inventory - Laundry Supplies	Asset	Current Asset	Detergent, conditioner
-1220	Inventory - Water Refilling Supplies	Asset	Current Asset	Filters, bottles, caps
-1300	Prepaid Expenses	Asset	Current Asset	Advance payments
-1500	Salon Equipment	Asset	Non-Current Asset	Chairs, mirrors, tools
-1510	Laundry Equipment	Asset	Non-Current Asset	Washers, dryers
-1520	Water Refilling Equipment	Asset	Non-Current Asset	Filtration machines
-1600	Furniture and Fixtures	Asset	Non-Current Asset	Tables, shelves
-1700	Leasehold Improvements	Asset	Non-Current Asset	Renovations
-1800	Accumulated Depreciation	Contra Asset	Non-Current Asset	Asset depreciation
-2000	Accounts Payable	Liability	Current Liability	Supplier obligations
-2100	Accrued Expenses	Liability	Current Liability	Unpaid expenses
-2200	Salaries Payable	Liability	Current Liability	Employee wages due
-2300	Utilities Payable	Liability	Current Liability	Bills due
-2400	Taxes Payable	Liability	Current Liability	Government taxes
-3000	Owner's Capital	Equity	Owner's Equity	Initial investment
-3100	Owner's Drawings	Equity	Owner's Equity	Owner withdrawals
-3200	Retained Earnings	Equity	Owner's Equity	Accumulated profits
-4000	Service Revenue - Hair Salon	Revenue	Income	Salon services
-4010	Service Revenue - Laundry	Revenue	Income	Laundry services
-4020	Service Revenue - Water Refilling	Revenue	Income	Water sales
-4100	Product Sales	Revenue	Income	Retail product sales
-5000	Cost of Sales - Hair	Cost of Sales	Direct Cost	Salon materials
-5010	Cost of Sales - Laundry	Cost of Sales	Direct Cost	Laundry supplies
-5020	Cost of Sales - Water	Cost of Sales	Direct Cost	Water supplies
-6000	Salaries and Wages	Expense	Operating Expense	Payroll
-6010	Staff Incentives	Expense	Operating Expense	Commissions
-6100	Rent Expense	Expense	Operating Expense	Store rent
-6110	Electricity Expense	Expense	Operating Expense	Power bills
-6120	Water Expense	Expense	Operating Expense	Water bills
-6200	Office Supplies	Expense	Operating Expense	Admin supplies
-6300	Repairs and Maintenance	Expense	Operating Expense	Equipment upkeep
-6400	Professional Fees	Expense	Operating Expense	Accounting/legal
-6500	Depreciation Expense	Expense	Operating Expense	Asset depreciation
-6600	Bank Charges	Expense	Operating Expense	Bank fees
-6700	Taxes and Licenses	Expense	Operating Expense	Permits and taxes
+10000	Cash on Hand	Asset	Bank	
+10001	Change Fund	Asset	Bank	Change of Fund is a fund given to Cashier used for Change to customers when payments are not rounded off
+10002	Petty Cash Fund	Asset	Bank	it’s a kind of revolving fund for Accounting and Manufacturing departments
+10003	Revolving Fund	Asset	Bank	it’s a Petty Cash Fund used for normal operations to Buy something or transporation etc by the Operations
+10004	Purchasing Fund	Asset	Bank	Fund held by Purchasing supervisor for Purchase of items based on PO etc.
+10005	Customer Refund	Asset	Bank	Fund used for refund to customer by Cash ( needs to be check by Jinki in more detail)
+10006	Undeposited Funds	Asset	Bank	Undeposited Fund that is not yet deposited into the Bank ( needs to be check by Jinki in more detail)
+10021	Revolving Fund - FnT	Asset	Bank	
+10022	Undeposited Cash - FnT Store 1	Asset	Bank	Undeposited Cash of the Store until it is deposited into the Bank
+10023	Undeposited Cash - FnT Store 2	Asset	Bank	Undeposited Cash of the Store until it is deposited into the Bank
+10024	Change Fund - FnT Store 1	Asset	Bank	
+10025	Change Fund - FnT Store 2	Asset	Bank	
+10031	Revolving Fund - C4T	Asset	Bank	
+10032	Undeposited Cash - C4T Store 1	Asset	Bank	Undeposited Cash of the Store until it is deposited into the Bank
+10033	Undeposited Cash - C4T Store 2	Asset	Bank	Undeposited Cash of the Store until it is deposited into the Bank
+10034	Change Fund - C4T Store 1	Asset	Bank	
+10035	Change Fund - C4T Store 2	Asset	Bank	
+11000	Cash in Bank	Asset	Bank	
+11100	Bank of the Philippine Islands	Asset	Bank	
+11101	BPI AS Fortuna Acct. # 9111007206	Asset	Bank	
+11102	BPI AS Fortuna Acct. # 9113051571	Asset	Bank	
+11103	BPI AS Fortuna Acct. # 9113057413	Asset	Bank	
+11104	BPI Ayala Malls Central Bloc Acct. # 0423000029	Asset	Bank	
+11105	BPI Insular Mandaue Acct. #0253-0092-05 (CCW/KWC)	Asset	Bank	
+11106	BPI Lightsite Mandaue Acct. # 4744-0240-94 (JWW/CCW)	Asset	Bank	
+11107	BPI Insular Mandaue Acct. # 0251-0050-32	Asset	Bank	
+11121	Cash in Bank - BPI - 4741-0061-25	Asset	Bank	
+11131	Cash in Bank - BPI - 4741-0067-53	Asset	Bank	
+11200	China Banking Corp.	Asset	Bank	
+11201	CBC Acct. # 1933824116	Asset	Bank	
+11300	Eastwest Bank	Asset	Bank	
+11301	EWB Disb Acct. 200001413952	Asset	Bank	
+11302	EWB Dep. Acct. 200005531957	Asset	Bank	
+11303	EWB Savings Acct. 200011697215 (JWW/CCW)	Asset	Bank	
+11304	EWB Savings Acct. 200048030741 (MACW/CCW)	Asset	Bank	
+11321	Cash in Bank - CBC - 11700003315	Asset	Bank	
+11400	Wealth Bank	Asset	Bank	
+11401	Wealth Bank # 012-01-0003713	Asset	Bank	
+11500	BPI - Maxi Savers	Asset	Bank	
+11501	BPI MS Acct. # 1363-0244-98	Asset	Bank	
+11502	BPI MS Acct. # 9133-0829-02	Asset	Bank	
+11503	BPI MS Acct. # 4743-0624-64	Asset	Bank	
+11504	BPI MS Acct. # 4743-0625-29	Asset	Bank	
+11505	BPI MS Acct. # 9133-0837-12	Asset	Bank	
+11506	BPI MS Acct. # 9133-0845-14	Asset	Bank	
+11507	BPI MS Acct. # 000253-0005-26	Asset	Bank	
+11508	BPI MS Acct. # 9113-0790-13	Asset	Bank	
+11600	Philippine National Bank	Asset	Bank	
+11601	PNB-TD 021-378	Asset	Bank	
+11602	PNB 3030-6000-9175	Asset	Bank	
+11603	PNB 3038-1002-1073	Asset	Bank	
+11610	Metrobank	Asset	Bank	
+11611	Metrobank Acct. # 7-23600587-5	Asset	Bank	
+11700	Banco De Oro	Asset	Bank	
+11701	BDO Acct. # 006360238062	Asset	Bank	
+11900	Security Bank	Asset	Bank	
+11901	Security Bank Acct. # 0000019985098	Asset	Bank	
+11902	Security Bank Acct. # 0000026846980	Asset	Bank	
+11920	Maybank	Asset	Bank	
+11921	Maybank Account No. 00765000731	Asset	Bank	
+11930	City Savings Bank	Asset	Bank	
+11931	City Savings Bank Account No. 200035057907	Asset	Bank	
+11950	Digital Payment	Asset	Bank	
+11951	PayPal	Asset	Bank	
+12000	Accounts Receivable	Asset	Current Asset	
+12100	Accounts Receivable Trade	Asset	Current Asset	
+12101	Accounts Receivable Trade - Unbilled	Asset	Current Asset	
+12200	Accounts Receivable - Non-Trade	Asset	Current Asset	
+13000	Advances	Asset	Current Asset	
+13200	SSS Reimbursement Receivable	Asset	Current Asset	
+13300	Advances To Employees	Asset	Current Asset	
+13301	Advances To Employees - Insurance	Asset	Current Asset	
+13302	Advances To Employees - Rma	Asset	Current Asset	
+13303	Advances To Employees - Emergency Loans	Asset	Current Asset	
+13304	Advances To Employees - Uniforms & PPE	Asset	Current Asset	
+13305	Advances To Employees - For Liquidation	Asset	Current Asset	
+13306	Advances To Employees - Cod	Asset	Current Asset	
+13307	Advances To Employees - Others	Asset	Current Asset	
+13308	Advances To Employees-A/R Transactions	Asset	Current Asset	
+13400	Advances To Directors	Asset	Current Asset	
+14000	Statutory Current Assets	Asset	Current Asset	
+14200	Creditable Withholding Tax	Asset	Current Asset	WTH deducted by Customers
+14300	VAT on Purchases	Asset	Current Asset	
+15000	Inventory	Asset	Current Asset	
+15100	Raw Materials Inventory	Asset	Current Asset	
+15101	Raw Materials Inventory - Dpod	Asset	Current Asset	
+15102	Raw Materials Inventory - LFP	Asset	Current Asset	
+15103	Raw Materials Inventory - Signage/Assembly	Asset	Current Asset	
+15104	Raw Materials Inventory - Cnc	Asset	Current Asset	
+15200	Consumables Inventory	Asset	Current Asset	
+15201	Consumables Inventory - Dpod	Asset	Current Asset	
+15202	Consumables Inventory - Lfp	Asset	Current Asset	
+15203	Consumables Inventory - Signage/Assembly	Asset	Current Asset	
+15204	Consumables Inventory - Cnc	Asset	Current Asset	
+15221	Inventory - Laundry Supplies	Asset	Current Asset	
+15222	Inventory - Water Refilling Supplies	Asset	Current Asset	
+15231	Inventory - Hair Products	Asset	Current Asset	
+15300	Spare Parts Inventory	Asset	Current Asset	
+15301	Spare Parts Inventory - Dpod	Asset	Current Asset	
+15302	Spare Parts Inventory - Lfp	Asset	Current Asset	
+15303	Spare Parts Inventory - Signage/Assembly	Asset	Current Asset	
+15304	Spare Parts Inventory - Cnc	Asset	Current Asset	
+15400	Supplies Inventory	Asset	Current Asset	
+15500	Finished Goods Inventory	Asset	Current Asset	
+15501	Finished Goods Inventory - Dpod	Asset	Current Asset	
+15502	Finished Goods Inventory - Lfp	Asset	Current Asset	
+15503	Finished Goods Inventory - Signage/Assembly	Asset	Current Asset	
+15504	Finished Goods Inventory - Cnc	Asset	Current Asset	
+15600	Inventory In Transit	Asset	Current Asset	
+15601	Inventory In Transit	Asset	Current Asset	
+15700	Bank Reconciliation	Asset	Current Asset	
+15701	Outstanding Payments	Asset	Current Asset	
+15702	Outstanding Receipts	Asset	Current Asset	
+15703	Bank Suspense Account	Asset	Current Asset	
+16000	Prepayments	Asset	Current Asset	
+16001	Prepaid Insurance	Asset	Current Asset	
+16002	Prepaid Rent	Asset	Current Asset	
+16003	Prepaid Taxes	Asset	Current Asset	
+16004	Prepaid Service Fee	Asset	Current Asset	
+16005	Prepaid Advertising & Promotion	Asset	Current Asset	
+16006	Prepaid Taxes, Permits And Licenses	Asset	Current Asset	
+16007	Prepaid Membership Fee	Asset	Current Asset	
+16008	Prepaid Expenses - OTHERS	Asset	Current Asset	
+17000	Property, Plant & Equipment	Asset	Fixed Asset	
+17010	Land	Asset	Fixed Asset	
+17020	Building	Asset	Fixed Asset	
+17021	Accumulated Depreciation - Building	Asset	Fixed Asset	
+17030	Building Improvement	Asset	Fixed Asset	
+17031	Accumulated Depreciation - Building Impovements	Asset	Fixed Asset	
+17040	Office Equipments	Asset	Fixed Asset	
+17041	Accumulated Depreciation - Office Equipment	Asset	Fixed Asset	
+17050	Furnitures And Fixtures	Asset	Fixed Asset	
+17051	Accumulated Depreciation - Furnitures And Fixtures	Asset	Fixed Asset	
+17060	Leasehold Improvements	Asset	Fixed Asset	
+17061	Accumulated Depreciation - Leasehold Improvements	Asset	Fixed Asset	
+17070	Machineries & Equipment	Asset	Fixed Asset	
+17071	Accumulated Depreciation - Machineries & Equipment	Asset	Fixed Asset	
+17080	Tools and Accessories	Asset	Fixed Asset	
+17081	Accumulated Depreciation - Tools	Asset	Fixed Asset	
+17090	Transportation Equipment	Asset	Fixed Asset	
+17091	Accumulated Depreciation - Transportation Equipment	Asset	Fixed Asset	
+17100	Intangible Assets	Asset	Fixed Asset	
+17101	Accumulated Amortization - Intangible Assets	Asset	Fixed Asset	
+19000	Investments	Asset	Non-current Asset	
+19100	Investment In Property	Asset	Non-current Asset	
+19101	Condo Unit (Tytans Properties)	Asset	Non-current Asset	
+19102	Residential House & Lot (MACW)	Asset	Non-current Asset	
+19103	Residential House & Lot (JECW)	Asset	Non-current Asset	
+19104	Residential Lot (TCT No. 111-2022002332)	Asset	Non-current Asset	
+19105	Condo Unit (Cityland Pasong Tamo)	Asset	Non-current Asset	
+19106	Condo Unit (CLI ASTRA with PARKING)	Asset	Non-current Asset	
+19107	Condo Unit (Rockwell IPI Devt. Corp)	Asset	Non-current Asset	
+19108	Condo Unit (Rockwell Aruga Resort & Residences)	Asset	Non-current Asset	
+19109	Condo unit (CLI NUD Ventures, Inc.)	Asset	Non-current Asset	
+19200	Investments : Investment In Stocks	Asset	Non-current Asset	
+19201	City Sports Club Inc.	Asset	Non-current Asset	
+19202	Casino Espanol Inc.	Asset	Non-current Asset	
+19203	Bpi - Policy No. 7003833970	Asset	Non-current Asset	
+19204	Manulife - Policy No. 8890111055	Asset	Non-current Asset	
+19205	Bpi - Policy No. 7004327311	Asset	Non-current Asset	
+19206	Manulife - Policy No. 8890235656	Asset	Non-current Asset	
+19207	TROO - Policy No. 402950030692	Asset	Non-current Asset	
+19500	Refundable Deposit	Asset	Non-current Asset	
+19501	Refundable Deposit	Asset	Non-current Asset	
+19502	Refundable Deposit-VECO	Asset	Non-current Asset	
+19503	Refundable Deposit-SM/AYALA Rent	Asset	Non-current Asset	
+19504	Refundable Deposit-Construction Bond	Asset	Non-current Asset	
+19505	Refundable Deposit-Others	Asset	Non-current Asset	
+19506	Refundable Deposit-FnT	Asset	Non-current Asset	
+19507	Refundable Deposit-C4T	Asset	Non-current Asset	
+20100	Accounts Payable	Liability	Current Liability	
+20110	Accounts Payable - Trade	Liability	Current Liability	
+20120	Accounts Payable - Non-Trade	Liability	Current Liability	
+20300	Inventory Received Not Billed	Liability	Current Liability	
+21000	Other Current Liabilities	Liability	Current Liability	
+21110	VAT on Sales	Liability	Current Liability	
+21120	VAT Payable	Liability	Current Liability	
+21130	Income Tax Payable	Liability	Current Liability	
+21150	Expanded Withholding Tax	Liability	Current Liability	
+21160	Advertising Payable	Liability	Current Liability	
+21170	Short Term Loans Payable	Liability	Current Liability	
+21180	Loans Payable	Liability	Current Liability	
+22000	Payroll Liablilities	Liability	Current Liability	
+22010	Salaries Payable	Liability	Current Liability	
+22110	Compensation Withholding Tax	Liability	Current Liability	
+22120	Hdmf Premium Payable	Liability	Current Liability	
+22130	Hdmf Loans Payable	Liability	Current Liability	
+22150	Philhealth Premium Payable	Liability	Current Liability	
+22160	SSS Premium Payable	Liability	Current Liability	
+22170	SSS Loans Payable	Liability	Current Liability	
+22180	Incentive Payable	Liability	Current Liability	
+22190	Commission Payable	Liability	Current Liability	
+22200	13Th Month Pay Payable	Liability	Current Liability	
+22210	Last Pay Payable	Liability	Current Liability	
+22220	Deferred Payroll Liability	Liability	Current Liability	
+23000	Customer Deposits	Liability	Current Liability	
+27000	Long Term Liabilities	Liability	Non-current Liability	
+27002	Loans Payable	Liability	Non-current Liability	
+27005	Financing Payable - China Banking Corp.	Liability	Non-current Liability	
+27006	Loans Payable - Maybank	Liability	Non-current Liability	
+27007	Financing Payable - Rockwell IPI Devt Corp.	Liability	Non-current Liability	
+27008	Financing Payable - Rockwell Land Corporation	Liability	Non-current Liability	
+27009	Financing Payable - CLI NUD Ventures, Inc	Liability	Non-current Liability	
+27010	Financing Payable - Security Bank Corp.	Liability	Non-current Liability	
+27011	Financing Payable - CLI Astra Centre	Liability	Non-current Liability	
+28000	Capital Stock	Equity	Equity	
+28001	Subscribed Capital Stock	Equity	Equity	
+29000	Retained Earnings	Equity	Equity	
+30000	Revenue	Revenue	Income	
+30100	Sales	Revenue	Income	
+30110	Service Revenue - Laundry	Revenue	Income	
+30120	Service Revenue - Water Refilling	Revenue	Income	
+30130	Product Sales	Revenue	Income	
+30140	Service Revenue - Hair Salon	Revenue	Income	
+30200	Sales Discount	Revenue	Income	
+30300	Sales Returns & Allowances	Revenue	Income	
+30400	Purchases	Cost of Sales	Direct Cost	
+30401	Direct Materials	Cost of Sales	Direct Cost	
+30402	Direct Labor	Cost of Sales	Direct Cost	
+30403	Cost of Goods Sold	Cost of Sales	Direct Cost	
+30404	Cost of Sales - Laundry	Cost of Sales	Direct Cost	
+30405	Cost of Sales - Water	Cost of Sales	Direct Cost	
+30406	Cost of Sales - Hair	Cost of Sales	Direct Cost	
+30500	Factory Overhead	Cost of Sales	Direct Cost	
+30501	Indirect Labor	Cost of Sales	Direct Cost	
+30502	Insurance Expense - FOH	Cost of Sales	Direct Cost	
+30503	Mobilization & Installation	Cost of Sales	Direct Cost	
+30504	Materials, Tools & Supplies	Cost of Sales	Direct Cost	
+30505	Production Incentive -FOH	Cost of Sales	Direct Cost	
+30506	Freight In	Cost of Sales	Direct Cost	
+30507	Depreciation - FOH	Cost of Sales	Direct Cost	
+30508	Amortization - FOH	Cost of Sales	Direct Cost	
+30509	Communication - FOH	Cost of Sales	Direct Cost	
+30510	Spoilage & Damages - FOH	Cost of Sales	Direct Cost	
+30511	Fuel And Oil - FOH	Cost of Sales	Direct Cost	
+30512	Rent Expense - FOH	Cost of Sales	Direct Cost	
+30513	Repairs & Maintenance - FOH	Cost of Sales	Direct Cost	
+30514	Transportation - FOH	Cost of Sales	Direct Cost	
+30515	13th Month Pay - FOH	Cost of Sales	Direct Cost	
+30516	Paid Leaves - FOH	Cost of Sales	Direct Cost	
+30517	HDMF Employer Share - FOH	Cost of Sales	Direct Cost	
+30518	PHIC Employer Share - FOH	Cost of Sales	Direct Cost	
+30519	SSS Employer Share - FOH	Cost of Sales	Direct Cost	
+30520	Hazard Pay - FOH	Cost of Sales	Direct Cost	
+30521	Other Incentive - FOH	Cost of Sales	Direct Cost	
+30522	Employees Uniform & PPE - FOH	Cost of Sales	Direct Cost	
+30523	Taxes, Permits and Licenses - FOH	Cost of Sales	Direct Cost	
+30600	Operating Expenses	Expense	Operating Expense	
+30601	Salaries & Wages - Basic	Expense	Operating Expense	
+30602	Salaries & Wages - Overtime	Expense	Operating Expense	
+30603	Paid Leaves	Expense	Operating Expense	
+30604	SSS Employer Share	Expense	Operating Expense	
+30605	PHIC Employer Share	Expense	Operating Expense	
+30606	HDMF Employer Share	Expense	Operating Expense	
+30607	13th Month Pay	Expense	Operating Expense	
+30608	Meals And Entertainment	Expense	Operating Expense	
+30609	Employees Uniform & PPE	Expense	Operating Expense	
+30610	Trainings & Seminars	Expense	Operating Expense	
+30611	Commission Expense - Internal	Expense	Operating Expense	
+30612	Other Incentive	Expense	Operating Expense	
+30613	Recreational Activities	Expense	Operating Expense	
+30614	Separation/Retirement Pay	Expense	Operating Expense	
+30615	Membership Dues And Subscription	Expense	Operating Expense	
+30616	Rent Expense	Expense	Operating Expense	
+30617	Professional Fees	Expense	Operating Expense	
+30618	Insurance Expense	Expense	Operating Expense	
+30619	Interest Expense	Expense	Operating Expense	
+30620	Taxes, Permits And Licenses	Expense	Operating Expense	
+30621	Security Services	Expense	Operating Expense	
+30622	Janitorial Expenses	Expense	Operating Expense	
+30623	Amortization Expense	Expense	Operating Expense	
+30624	Depreciation Expense	Expense	Operating Expense	
+30625	Transportation Expenses	Expense	Operating Expense	
+30626	Travel Expenses	Expense	Operating Expense	
+30627	Electricity Expense	Expense	Operating Expense	
+30628	Water Expenses	Expense	Operating Expense	
+30629	Communication Expenses	Expense	Operating Expense	
+30630	Samples	Expense	Operating Expense	
+30631	Postage And Delivery	Expense	Operating Expense	
+30632	Research And Development	Expense	Operating Expense	
+30633	Commission Expense - External	Expense	Operating Expense	
+30634	Donation And Charitable Contributions	Expense	Operating Expense	
+30635	Penalties And Surcharges	Expense	Operating Expense	
+30636	Fuel And Oil	Expense	Operating Expense	
+30637	Repairs And Maintenance	Expense	Operating Expense	
+30638	Representation Expenses	Expense	Operating Expense	
+30639	Utilities And Medicine	Expense	Operating Expense	
+30640	Office Supplies	Expense	Operating Expense	
+30641	Service Charge	Expense	Operating Expense	
+30642	Internal Orders	Expense	Operating Expense	
+30643	Advertising And Promotion	Expense	Operating Expense	
+30644	Custom Duty Expenses	Expense	Operating Expense	
+30645	Bad Debts Expense	Expense	Operating Expense	
+30700	Other Expenses	Expense	Operating Expense	
+30701	Bank Charges	Expense	Operating Expense	
+30702	Miscellaneous Expenses	Expense	Operating Expense	
+30703	Rounding Gain/Loss	Expense	Operating Expense	
+30704	Facilitation Fee (SOP)	Expense	Operating Expense	
+30800	Miscellaneous Income	Revenue	Other Income	
+30801	Interest Income	Revenue	Other Income	
+30802	Other Income	Revenue	Other Income	
+30803	Gain/Loss on Sale of Asset	Revenue	Other Income	
+30804	Purchase Discount	Revenue	Other Income	
+30805	Rental Income	Revenue	Other Income	
+30900	Income Tax Expense	Expense	Operating Expense	

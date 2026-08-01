@@ -1,7 +1,11 @@
 const express = require('express');
+const multer = require('multer');
 const pool = require('../db');
 const { requireAuth, requirePermission } = require('../middleware/auth');
 const { getSalesRepEmployeeScope } = require('../lib/salesVisibility');
+const { extractPdfText } = require('../lib/posCategorySales');
+const { parseZReading } = require('../lib/posZReading');
+const { computeSalesOrderGl } = require('../lib/glImpact');
 
 const router = express.Router();
 const ROUTE = '/sales-orders';
@@ -9,7 +13,25 @@ const ROUTE = '/sales-orders';
 const STATUS_VALUES = [
   'pending_for_jo', 'jo_in_process', 'pending_delivery', 'partially_delivered',
   'pending_billing', 'pending_billing_partially_delivered', 'billed', 'cancelled',
+  // Counter sales imported from a POS shift report never enter the production pipeline the
+  // others describe. They land UNDEPOSITED (money in the till) and a Bank Deposit moves them
+  // to DEPOSITED, exactly like a Customer Payment. 'recorded' predates that split and is kept
+  // so nothing that already used it breaks.
+  'recorded', 'undeposited', 'deposited',
 ];
+
+// Each PDF is parsed in memory and thrown away; only the extracted figures are persisted.
+// 10MB per file is far above any real shift report (the samples are well under 200KB) and
+// exists to stop an oversized upload tying up the process. 62 files covers a month of two
+// shifts a day, which is the longest period one sheet realistically spans.
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 62 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname)) return cb(null, true);
+    cb(new Error('Only PDF files can be imported.'));
+  },
+});
 
 router.get('/', requireAuth, requirePermission(ROUTE, 'can_view'), async (req, res, next) => {
   try {
@@ -74,6 +96,227 @@ router.get('/', requireAuth, requirePermission(ROUTE, 'can_view'), async (req, r
   }
 });
 
+// Step 1 of the PDF import: read one or more Z-Reading shift reports and hand back what they
+// say, WITHOUT writing anything. Several files at once because a day has more than one shift
+// and a sheet covers a whole period -- each PDF becomes one row of the grid. Placed above
+// /:id so "import" is never mistaken for an order id.
+router.post('/import/preview', requireAuth, requirePermission(ROUTE, 'can_add'), pdfUpload.array('files', 62), async (req, res, next) => {
+  try {
+    const files = req.files || [];
+    if (!files.length) return res.status(400).json({ error: 'Attach at least one Z-Reading PDF.' });
+
+    const shifts = [];
+    for (const file of files) {
+      let text;
+      try {
+        text = await extractPdfText(file.buffer);
+      } catch {
+        shifts.push({
+          ok: false, source_file: file.originalname,
+          errors: ['This PDF could not be read. If it is a scan rather than a digital export, the text cannot be extracted.'],
+        });
+        continue;
+      }
+
+      const parsed = parseZReading(text);
+
+      // Surfaced, not blocked -- the operator sees which order already covers this shift.
+      // The unique index on the line is what actually enforces it at save time.
+      let duplicate = null;
+      if (parsed.import_key) {
+        const [[row]] = await pool.query(
+          `SELECT so.id, so.sales_order_no, sol.sale_date
+           FROM sales_order_lines sol
+           JOIN sales_orders so ON so.id = sol.sales_order_id
+           WHERE sol.pos_import_key = ?`,
+          [parsed.import_key]
+        );
+        duplicate = row || null;
+      }
+
+      shifts.push({ ...parsed, source_file: file.originalname, duplicate });
+    }
+
+    // Chronological, so the grid reads like the sheet regardless of the order the files were
+    // picked in.
+    shifts.sort((a, b) => `${a.closed_date || ''} ${a.closed_time || ''}`.localeCompare(`${b.closed_date || ''} ${b.closed_time || ''}`));
+    res.json({ shifts });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Step 2: create the Sales Order from the rows the preview showed. Figures are stored as the
+// report printed them ("read, but verify"), and every internal relationship is re-checked
+// here before anything is written -- a row that does not reconcile is refused, not stored.
+router.post('/import', requireAuth, requirePermission(ROUTE, 'can_add'), async (req, res, next) => {
+  const conn = await pool.getConnection();
+  try {
+    const {
+      customer_id: customerId, office_location_id: officeLocationId, sales_rep_id: salesRepId,
+      memo, shifts,
+    } = req.body;
+
+    if (!customerId) return res.status(400).json({ error: 'Select the customer to record these sales against.' });
+    if (!Array.isArray(shifts) || !shifts.length) return res.status(400).json({ error: 'Nothing to import.' });
+
+    const [[customer]] = await conn.query('SELECT id FROM customers WHERE id = ?', [customerId]);
+    if (!customer) return res.status(400).json({ error: 'Customer not found.' });
+
+    const n = (v) => (v === null || v === undefined || v === '' ? 0 : Number(v));
+    const TOLERANCE = 0.01;
+    const near = (a, b) => Math.abs(Number(a.toFixed(2)) - Number(b.toFixed(2))) <= TOLERANCE;
+
+    const rows = [];
+    const seen = new Set();
+    for (const s of shifts) {
+      const label = `${s.branch_code || '?'}/${s.shift || '?'} ${s.sale_date || ''}`.trim();
+      if (!s.sale_date) return res.status(400).json({ error: `A shift (${s.source_file || label}) has no date.` });
+
+      const r = {
+        sale_date: s.sale_date,
+        cash: n(s.cash),
+        collected_cash: n(s.collected_cash),
+        gcash: n(s.gcash),
+        collected_gcash: n(s.collected_gcash),
+        collected_bank_deposit: n(s.collected_bank_deposit),
+        total_daily_sales: n(s.total_daily_sales),
+        total_cash_to_deposit: n(s.total_cash_to_deposit),
+        total_gcash: n(s.total_gcash),
+        uncollected_sales: n(s.uncollected_sales),
+        vat_ex: n(s.vat_ex),
+        vat_12: n(s.vat_12),
+        vat_inc: n(s.vat_inc),
+      };
+
+      // The Z-Reading's own arithmetic, re-asserted. Each of these holds on a well-formed
+      // report, so a failure means the figures were edited or misread between preview and
+      // save -- either way not something to persist.
+      if (!near(r.cash + r.gcash, r.total_daily_sales)) {
+        return res.status(409).json({ error: `${label}: cash ${r.cash.toFixed(2)} + GCash ${r.gcash.toFixed(2)} does not equal total daily sales ${r.total_daily_sales.toFixed(2)}.` });
+      }
+      if (!near(r.vat_ex + r.vat_12, r.vat_inc)) {
+        return res.status(409).json({ error: `${label}: VAT EX ${r.vat_ex.toFixed(2)} + VAT 12% ${r.vat_12.toFixed(2)} does not equal VAT inclusive ${r.vat_inc.toFixed(2)}.` });
+      }
+      if (!near(r.vat_inc, r.total_daily_sales)) {
+        return res.status(409).json({ error: `${label}: VAT inclusive ${r.vat_inc.toFixed(2)} does not equal total daily sales ${r.total_daily_sales.toFixed(2)}.` });
+      }
+      // The report prints one COLLECTED total; the operator splits it across cash and GCash,
+      // and the split has to add back to what was collected.
+      if (!near(r.collected_cash + r.collected_gcash, r.collected_bank_deposit)) {
+        return res.status(409).json({ error: `${label}: collected cash ${r.collected_cash.toFixed(2)} + collected GCash ${r.collected_gcash.toFixed(2)} does not equal collected ${r.collected_bank_deposit.toFixed(2)}.` });
+      }
+
+      if (s.import_key) {
+        if (seen.has(s.import_key)) return res.status(409).json({ error: `${label} was attached twice.` });
+        seen.add(s.import_key);
+        const [[dupe]] = await conn.query(
+          `SELECT so.sales_order_no FROM sales_order_lines sol
+           JOIN sales_orders so ON so.id = sol.sales_order_id WHERE sol.pos_import_key = ?`,
+          [s.import_key]
+        );
+        if (dupe) return res.status(409).json({ error: `${label} has already been imported as ${dupe.sales_order_no}.` });
+      }
+
+      rows.push({
+        ...r,
+        // Kept so the GL entry can split revenue between laundry and water refilling; the
+        // grid row itself only carries the day's totals.
+        categories: (Array.isArray(s.categories) ? s.categories : [])
+          .filter((c) => c && c.name)
+          .map((c) => ({ name: String(c.name).trim().slice(0, 80), amount: n(c.amount) })),
+        import_key: s.import_key || null,
+        branch_code: s.branch_code || null,
+        shift: s.shift || null,
+        cashier: s.closed_by || null,
+        beginning_or: s.beginning_or || null,
+        ending_or: s.ending_or || null,
+        store_name: s.store_name || null,
+      });
+    }
+
+    rows.sort((a, b) => a.sale_date.localeCompare(b.sale_date));
+    const netOfTax = Number(rows.reduce((s, r) => s + r.vat_ex, 0).toFixed(2));
+    const taxTotal = Number(rows.reduce((s, r) => s + r.vat_12, 0).toFixed(2));
+    const totalAmount = Number(rows.reduce((s, r) => s + r.total_daily_sales, 0).toFixed(2));
+
+    const firstDate = rows[0].sale_date;
+    const lastDate = rows[rows.length - 1].sale_date;
+    const store = rows[0].store_name;
+    const branches = [...new Set(rows.map((r) => r.branch_code).filter(Boolean))].join(', ');
+    const period = firstDate === lastDate ? firstDate : `${firstDate} to ${lastDate}`;
+    const contractDescription = `Daily Sales & Collections — ${[store, branches].filter(Boolean).join(' ')} — ${period}`.slice(0, 500);
+
+    await conn.beginTransaction();
+    // estimate_id stays NULL: counter sales never had a quotation behind them. Status starts
+    // at 'undeposited' -- the money was taken at the counter and is sitting in Undeposited
+    // Funds until a Bank Deposit sweeps it, so the order must not land in the production or
+    // delivery queues.
+    const [result] = await conn.query(
+      `INSERT INTO sales_orders
+         (sales_order_no, estimate_id, sales_layout, pos_branch_code, pos_source_file, date_created,
+          customer_id, office_location_id, sales_rep_id, contract_description, memo, status,
+          subtotal, discount_total, net_of_tax, tax_total, total_amount, est_gp_rate, est_gp_amount)
+       VALUES ('', NULL, 'daily_collections', ?, ?, ?, ?, ?, ?, ?, ?, 'undeposited', ?, 0, ?, ?, ?, 0, 0)`,
+      [
+        branches || null, shifts.map((s) => s.source_file).filter(Boolean).join(', ').slice(0, 255) || null,
+        lastDate, customerId, officeLocationId || null, salesRepId || null, contractDescription,
+        memo || null, netOfTax, netOfTax, taxTotal, totalAmount,
+      ]
+    );
+    const salesOrderId = result.insertId;
+    await conn.query('UPDATE sales_orders SET sales_order_no = ? WHERE id = ?', [`SO-${60000 + salesOrderId}`, salesOrderId]);
+
+    let lineNo = 0;
+    for (const r of rows) {
+      lineNo += 1;
+      const [lineRes] = await conn.query(
+        `INSERT INTO sales_order_lines
+           (sales_order_id, line_no, pos_import_key, pos_branch_code, pos_shift, pos_cashier,
+            pos_beginning_or, pos_ending_or, sale_date, cash, collected_cash, gcash, collected_gcash,
+            collected_bank_deposit, total_daily_sales, total_cash_to_deposit, total_gcash,
+            uncollected_sales, vat_ex, vat_12, vat_inc)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          salesOrderId, lineNo, r.import_key, r.branch_code, r.shift, r.cashier,
+          r.beginning_or, r.ending_or, r.sale_date, r.cash, r.collected_cash, r.gcash, r.collected_gcash,
+          r.collected_bank_deposit, r.total_daily_sales, r.total_cash_to_deposit, r.total_gcash,
+          r.uncollected_sales, r.vat_ex, r.vat_12, r.vat_inc,
+        ]
+      );
+      const lineId = lineRes.insertId;
+      for (const c of r.categories) {
+        await conn.query(
+          'INSERT INTO sales_order_line_categories (sales_order_line_id, category_name, amount) VALUES (?, ?, ?)',
+          [lineId, c.name, c.amount]
+        );
+      }
+    }
+
+    // 'Created' rather than an 'Imported' event type: audit_logs.event_type is a fixed ENUM
+    // shared by every module, and widening it for one case would ripple further than this
+    // feature warrants. The source documents are recorded in the field/value instead.
+    await conn.query(
+      `INSERT INTO audit_logs (auditable_type, auditable_id, event_type, field_name, old_value, new_value, set_by_user_id)
+       VALUES ('SalesOrder', ?, 'Created', 'z_reading_import', NULL, ?, ?)`,
+      [salesOrderId, rows.map((r) => r.import_key).filter(Boolean).join('; ').slice(0, 1000) || null, req.user.id]
+    );
+    await conn.commit();
+
+    const [[row]] = await pool.query('SELECT * FROM sales_orders WHERE id = ?', [salesOrderId]);
+    res.status(201).json(row);
+  } catch (err) {
+    await conn.rollback();
+    // The unique index is the real guard -- it also catches two operators importing the same
+    // shift at the same moment, which the SELECT above cannot.
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'One of these shifts has already been imported.' });
+    next(err);
+  } finally {
+    conn.release();
+  }
+});
+
+
 router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req, res, next) => {
   try {
     const [[so]] = await pool.query(
@@ -115,7 +358,10 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
       [req.params.id]
     );
 
-    res.json({ ...so, lines });
+    // Only an imported counter-sales order posts to the GL -- an estimate-derived order's
+    // entry happens when it is invoiced, so computeSalesOrderGl returns nothing for those.
+    const glImpact = await computeSalesOrderGl(so, lines);
+    res.json({ ...so, lines, gl_impact: glImpact });
   } catch (err) {
     next(err);
   }
@@ -138,6 +384,13 @@ router.post('/:id/lines/:lineId/create-jo', requireAuth, requirePermission(ROUTE
     if (!so || !line) {
       await conn.rollback();
       return res.status(404).json({ error: 'Not found' });
+    }
+    // An imported POS shift report records sales that already happened at the counter --
+    // there is no production work to raise, so it never gets a Job Order. Enforced here as
+    // well as hidden in the UI, since the button is not the only way to reach this.
+    if (so.pos_import_key) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'Imported counter sales do not have Job Orders.' });
     }
     if (line.job_order_id) {
       await conn.rollback();

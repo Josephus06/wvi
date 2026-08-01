@@ -253,7 +253,7 @@ export default function Layout() {
 
   useEffect(() => {
     const title = deriveTitle(location.pathname);
-    document.title = title ? `${title} - GSuite` : 'GSuite';
+    document.title = title ? `${title} - WVI` : 'WVI';
   }, [location.pathname]);
 
   function handleLogout() {

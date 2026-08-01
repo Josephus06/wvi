@@ -1,5 +1,5 @@
 {
-  "name": "gsuite-erp-server",
+  "name": "wvi-erp-server",
   "version": "1.0.0",
   "private": true,
   "type": "commonjs",
@@ -17,8 +17,10 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
     "mysql2": "^3.11.0",
-    "nodemailer": "^6.9.3"
+    "nodemailer": "^6.9.3",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "playwright": "^1.61.1"

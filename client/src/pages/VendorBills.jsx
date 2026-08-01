@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useAuth } from '../context/useAuth';
 import Pagination from '../components/Pagination';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -13,10 +14,11 @@ function money(v) {
 }
 function formatDate(v) { return v ? String(v).slice(0, 10) : ''; }
 
-// Mirrors Saved Invoices' list layout -- the AP-side counterpart, reached from a
-// Purchase Order's "Bill" button rather than its own standalone Add flow.
+// Mirrors Saved Invoices' list layout -- the AP-side counterpart. Bills reach this list
+// two ways: raised from a Purchase Order's "Bill" button, or entered directly here via
+// "Add Vendor Bill" (expense lines, no PO).
 export default function VendorBills() {
-
+  const { can } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -47,6 +49,9 @@ export default function VendorBills() {
     <div>
       <div className="page-header">
         <h1>Vendor Bills</h1>
+        {can('/vendor-bills', 'can_add') && (
+          <Link className="btn btn-primary" to="/vendor-bills/new">Add Vendor Bill</Link>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
