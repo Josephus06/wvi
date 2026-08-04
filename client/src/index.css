@@ -1059,6 +1059,49 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
 .print-terms h4 { margin: 16px 0 6px; color: #222; }
 .print-indent { margin-left: 16px; }
 .print-bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin: 6px 0; }
+/* ---------------------------------------------------------------------------
+   Cheque overlay (Bill Payment > Print > Cheque). Prints onto pre-printed cheque
+   stock, so the sheet is blank apart from four positioned fields.
+
+   Offsets are millimetres from the top-left of the paper, measured off the
+   sample cheque print-out. Cheque stock varies by bank -- these are the knobs to
+   nudge if the fields sit off the boxes. Print onto plain paper and hold it up
+   against a real cheque to check.
+   --------------------------------------------------------------------------- */
+:root {
+  --chq-date-top: 11mm;    --chq-date-right: 14mm;
+  --chq-payee-top: 19mm;   --chq-payee-left: 28mm;
+  --chq-amount-top: 19mm;  --chq-amount-right: 36mm;
+  --chq-words-top: 27mm;   --chq-words-left: 21mm;
+  --chq-font: 11pt;
+}
+.cheque-sheet {
+  position: relative;
+  width: 210mm;
+  height: 120mm;
+  margin: 0 auto;
+  background: var(--surface);
+  color: #000;
+  font-size: var(--chq-font);
+  font-family: var(--sans);
+}
+.cheque-sheet > div { position: absolute; white-space: nowrap; }
+.chq-date { top: var(--chq-date-top); right: var(--chq-date-right); display: flex; gap: 7mm; }
+.chq-date-group { letter-spacing: 3.2mm; }
+.chq-payee { top: var(--chq-payee-top); left: var(--chq-payee-left); font-weight: 600; }
+.chq-amount { top: var(--chq-amount-top); right: var(--chq-amount-right); font-weight: 600; }
+.chq-words { top: var(--chq-words-top); left: var(--chq-words-left); font-weight: 600; }
+
+/* On screen only: a faint outline so the operator can see the cheque area. Never printed. */
+.cheque-print .cheque-sheet { box-shadow: var(--shadow); outline: 1px dashed var(--border); }
+@media print {
+  .cheque-print .cheque-sheet {
+    box-shadow: none; outline: none; background: transparent;
+    width: auto; height: auto; margin: 0;
+  }
+  .cheque-print .print-toolbar { display: none !important; }
+}
+
 /* Payment Voucher (Bill Payment print-out). Reuses the estimate print sheet; these cover the
    bordered applied-bills table and the right-aligned total the voucher format uses. */
 .print-logo-img { height: 56px; max-width: 340px; object-fit: contain; object-position: left center; }

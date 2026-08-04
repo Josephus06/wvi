@@ -21,6 +21,9 @@ export default function BillPaymentView() {
   const { can } = useAuth();
   const [bp, setBp] = useState(null);
   const [tab, setTab] = useState('apply');
+  // Two print formats: the Payment Voucher hand-out, and the cheque overlay that prints
+  // onto pre-printed cheque stock.
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -66,7 +69,17 @@ export default function BillPaymentView() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-sm" onClick={() => navigate('/bill-payments')}>Back</button>
           {canEdit && <button className="btn btn-sm" disabled title="Editing a saved Bill Payment isn't implemented in this build">Edit</button>}
-          <button className="btn btn-sm" onClick={() => navigate(`/bill-payments/${id}/print`)}>Print</button>
+          <div style={{ position: 'relative' }}>
+            <button className="btn btn-sm" onClick={() => setShowPrintMenu((v) => !v)}>Print ▾</button>
+            {showPrintMenu && (
+              <div className="card" style={{ position: 'absolute', right: 0, top: '110%', zIndex: 20, padding: 6, minWidth: 120 }}>
+                <button type="button" className="btn btn-sm" style={{ width: '100%', marginBottom: 4 }}
+                  onClick={() => { setShowPrintMenu(false); navigate(`/bill-payments/${id}/print`); }}>Voucher</button>
+                <button type="button" className="btn btn-sm" style={{ width: '100%' }}
+                  onClick={() => { setShowPrintMenu(false); navigate(`/bill-payments/${id}/cheque`); }}>Cheque</button>
+              </div>
+            )}
+          </div>
           {canEdit && isOpen && <button className="btn btn-sm btn-warning" disabled={busy} onClick={handleVoid}>Void</button>}
         </div>
       </div>

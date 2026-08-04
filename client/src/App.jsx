@@ -107,6 +107,7 @@ import VendorBillPrint from './pages/VendorBillPrint';
 import VendorBillView from './pages/VendorBillView';
 import BillPayments from './pages/BillPayments';
 import BillPaymentPrint from './pages/BillPaymentPrint';
+import BillPaymentCheque from './pages/BillPaymentCheque';
 import BillPaymentView from './pages/BillPaymentView';
 import BillCredits from './pages/BillCredits';
 import BillCreditView from './pages/BillCreditView';
@@ -296,6 +297,7 @@ function App() {
         <Route path="/vendor-bills/:id" element={<VendorBillView />} />
         <Route path="/bill-payments" element={<BillPayments />} />
         <Route path="/bill-payments/:id/print" element={<BillPaymentPrint />} />
+        <Route path="/bill-payments/:id/cheque" element={<BillPaymentCheque />} />
         <Route path="/bill-payments/:id" element={<BillPaymentView />} />
         <Route path="/bill-credits" element={<BillCredits />} />
         <Route path="/bill-credits/:id" element={<BillCreditView />} />
