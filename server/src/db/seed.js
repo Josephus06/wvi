@@ -38,6 +38,20 @@ const LOOKUP_SEED = {
     { term_name: 'Cash on Delivery', no_of_days: 0 },
     { term_name: 'Net 30', no_of_days: 30 },
   ],
+  // Bill Payment and Customer Payment both REQUIRE a payment method, so an empty table makes
+  // both screens impossible to save -- the picker has nothing to choose and validation
+  // rejects the form. Seeded here rather than left to the user for that reason.
+  //
+  // "CHECK" must keep that exact spelling: BillPaymentModal swaps Reference # for Check Date
+  // and Check No by matching the name, mirroring the real system's conditional sub-fields.
+  payment_methods: [
+    { name: 'CASH', requires_reference: false },
+    { name: 'CHECK', requires_reference: true },
+    { name: 'BANK TRANSFER', requires_reference: true },
+    { name: 'GCASH', requires_reference: true },
+    { name: 'CREDIT CARD', requires_reference: true },
+    { name: 'DEBIT CARD', requires_reference: true },
+  ],
   sales_divisions: [{ name: 'Support' }, { name: 'Direct Sales' }],
   inventory_categories: [{ name: 'Raw Materials' }, { name: 'Finished Goods' }],
 };

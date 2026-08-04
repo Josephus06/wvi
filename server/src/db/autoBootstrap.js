@@ -58,9 +58,17 @@ async function ensureDatabaseReady() {
       run('create-pos-category-accounts.js');
     }
   }
-
+4
   console.log('First-time bootstrap complete.');
   return true;
 }
 
 module.exports = { ensureDatabaseReady };
+
+
+
+
+
+
+
+ 
