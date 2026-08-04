@@ -1,0 +1,15 @@
+# What `railway up` must NOT upload from the working directory.
+#
+# .env files matter twice over. They hold live credentials (API keys, SMTP password), and
+# server/src/index.js calls dotenv.config() at startup -- so a .env baked into the image
+# would OVERRIDE the environment variables set in the Railway dashboard and point the app at
+# a localhost database that does not exist there.
+.env
+*.env
+!.env.example
+!*/.env.example
+
+node_modules/
+dist/
+.git/
+*.log
