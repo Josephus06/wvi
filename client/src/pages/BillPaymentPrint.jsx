@@ -96,7 +96,10 @@ export default function BillPaymentPrint() {
             {billLines.map((l) => (
               <tr key={l.id}>
                 <td>{shortDate(l.vb_date_created)}</td>
-                <td>{l.vb_memo || l.vb_reference_no || l.bill_no}</td>
+                {/* Memo first -- it is the human summary of what was bought. Failing that the
+                    bill's own expense-line descriptions, then its reference, and only as a
+                    last resort the bill number. */}
+                <td>{l.vb_memo || l.vb_line_descriptions || l.vb_reference_no || l.bill_no}</td>
                 <td className="num">{money(l.vb_gross_amount)}</td>
                 <td className="num">{money(l.amount_due_before ?? l.vb_gross_amount)}</td>
                 <td className="num">{money(l.applied_amount)}</td>

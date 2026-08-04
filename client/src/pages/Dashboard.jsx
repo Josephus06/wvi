@@ -205,9 +205,9 @@ function AdminDashboard({ data, user, navigate }) {
         <div className="holo-card dash-chart-card">
           <h3>Org-Wide Sales Trend</h3>
           <div className="holo-tile-dark">
-            <Holo3DOrb value={approvalRingValue} max={100} color="var(--holo-cyan)" sub="estimates approved" />
+            <Holo3DOrb value={approvalRingValue} max={100} color="var(--holo-amber)" sub="estimates approved" />
             <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center' }}>
-              <Holo3DBars data={data.trend} color="#a78bfa" width={260} height={90} labels={last6MonthLabels()} />
+              <Holo3DBars data={data.trend} color="var(--gold)" width={260} height={90} labels={last6MonthLabels()} />
             </div>
           </div>
         </div>
@@ -218,7 +218,7 @@ function AdminDashboard({ data, user, navigate }) {
           <h3>Top Customers by Amount Ordered</h3>
           <BarList
             color="var(--dash-purple)"
-            data={data.topCustomers.map((c) => ({ label: c.name, value: c.amount, color: '#7c6fe8' }))}
+            data={data.topCustomers.map((c) => ({ label: c.name, value: c.amount, color: 'var(--dash-purple)' }))}
             formatValue={(v) => `₱${money(v)}`}
           />
         </div>
@@ -245,7 +245,7 @@ function AdminDashboard({ data, user, navigate }) {
           <h3>Sales Performance per Department</h3>
           <BarList
             color="var(--dash-blue)"
-            data={data.salesByDepartment.map((d) => ({ label: d.name, value: d.amount, color: '#4f8cf7' }))}
+            data={data.salesByDepartment.map((d) => ({ label: d.name, value: d.amount, color: 'var(--dash-blue)' }))}
             formatValue={(v) => `₱${money(v)}`}
           />
         </div>
@@ -276,7 +276,7 @@ function AdminDashboard({ data, user, navigate }) {
 
 function SalesDashboard({ data, user }) {
   const { summary, byRep, role } = data;
-  const pipelineSegments = summary.pipeline.map((p) => ({ label: p.status.replaceAll('_', ' '), value: p.count, color: PIPELINE_COLORS[p.status] || '#8d90c4' }));
+  const pipelineSegments = summary.pipeline.map((p) => ({ label: p.status.replaceAll('_', ' '), value: p.count, color: PIPELINE_COLORS[p.status] || 'var(--dash-lime)' }));
   const pipelineTotal = summary.pipeline.reduce((s, p) => s + p.count, 0);
   const activity = summary.pipeline.map((p) => ({
     title: p.status.replaceAll('_', ' '),
@@ -297,7 +297,7 @@ function SalesDashboard({ data, user }) {
         <div className="holo-card dash-chart-card">
           <h3>KPI · Win Rate &amp; Weighted Sales Trend</h3>
           <div className="holo-tile-dark">
-            <Holo3DOrb value={summary.kpi.winRate} max={100} color="var(--holo-cyan)" sub="win rate" />
+            <Holo3DOrb value={summary.kpi.winRate} max={100} color="var(--holo-amber)" sub="win rate" />
             <div style={{ display: 'flex', gap: 24, marginTop: 14, fontSize: 12.5 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ color: 'var(--holo-text-dim)' }}>Estimates Created</div>
@@ -430,11 +430,11 @@ function DesignSupervisorDashboard({ data, user, navigate }) {
         <div className="holo-card dash-chart-card">
           <h3>In Progress &amp; Workload per Artist</h3>
           <div className="holo-tile-dark">
-            <Holo3DOrb value={data.rings?.find((r) => r.label === 'In Progress')?.value ?? 0} max={100} color="var(--holo-cyan)" sub="in progress" />
+            <Holo3DOrb value={data.rings?.find((r) => r.label === 'In Progress')?.value ?? 0} max={100} color="var(--holo-amber)" sub="in progress" />
             <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'center' }}>
               <Holo3DBars
                 data={data.workload.map((w) => w.count)}
-                color="#a78bfa"
+                color="var(--gold)"
                 width={Math.max(160, data.workload.length * 42)}
                 height={90}
                 labels={data.workload.map((w) => w.name.split(' ')[0])}

@@ -178,9 +178,9 @@ async function repMetrics(employeeIds) {
     pipeline: pipelineRows,
     trend,
     rings: [
-      { label: 'Win Rate', value: winRate, color: '#7c6fe8' },
-      { label: 'Paid Ratio', value: (paidAmt + unpaidAmt) > 0 ? Math.round((paidAmt / (paidAmt + unpaidAmt)) * 100) : 0, color: '#4f8cf7' },
-      { label: 'Pipeline Approved', value: pipelineTotal ? Math.round((pipelineApproved / pipelineTotal) * 100) : 0, color: '#22c39e' },
+      { label: 'Win Rate', value: winRate, color: '#4A6329' },
+      { label: 'Paid Ratio', value: (paidAmt + unpaidAmt) > 0 ? Math.round((paidAmt / (paidAmt + unpaidAmt)) * 100) : 0, color: '#C9A227' },
+      { label: 'Pipeline Approved', value: pipelineTotal ? Math.round((pipelineApproved / pipelineTotal) * 100) : 0, color: '#3E8577' },
     ],
   };
 }
@@ -255,9 +255,9 @@ async function adminMetrics() {
       customerName: r.customer_name, createdAt: r.created_at,
     })),
     rings: [
-      { label: 'Users Active', value: userTotals.total ? Math.round((Number(activeUsers.count) / userTotals.total) * 100) : 0, color: '#7c6fe8' },
-      { label: 'Estimates Approved', value: estRingTotals.total ? Math.round((Number(estRingTotals.approved || 0) / estRingTotals.total) * 100) : 0, color: '#4f8cf7' },
-      { label: 'Orders Paid', value: orderPaidThisMonth.count ? Math.round((Number(orderPaidThisMonth.paid || 0) / orderPaidThisMonth.count) * 100) : 0, color: '#22c39e' },
+      { label: 'Users Active', value: userTotals.total ? Math.round((Number(activeUsers.count) / userTotals.total) * 100) : 0, color: '#4A6329' },
+      { label: 'Estimates Approved', value: estRingTotals.total ? Math.round((Number(estRingTotals.approved || 0) / estRingTotals.total) * 100) : 0, color: '#C9A227' },
+      { label: 'Orders Paid', value: orderPaidThisMonth.count ? Math.round((Number(orderPaidThisMonth.paid || 0) / orderPaidThisMonth.count) * 100) : 0, color: '#3E8577' },
     ],
   };
 }
@@ -353,8 +353,8 @@ async function designSupervisorMetrics() {
     workload: workload.map((w) => ({ artistId: w.artist_id, name: w.name, count: Number(w.count) })),
     overdue: overdue.map((o) => ({ id: o.id, jobOrderNo: o.job_order_no, plannedEndAt: o.planned_end_at, artistName: o.artist_name })),
     rings: [
-      { label: 'In Progress', value: activeCount ? Math.round((inProgressCount / activeCount) * 100) : 0, color: '#7c6fe8' },
-      { label: 'Sales-Ready', value: (inProgressCount + pendingSalesApprovalCount) ? Math.round((pendingSalesApprovalCount / (inProgressCount + pendingSalesApprovalCount)) * 100) : 0, color: '#4f8cf7' },
+      { label: 'In Progress', value: activeCount ? Math.round((inProgressCount / activeCount) * 100) : 0, color: '#4A6329' },
+      { label: 'Sales-Ready', value: (inProgressCount + pendingSalesApprovalCount) ? Math.round((pendingSalesApprovalCount / (inProgressCount + pendingSalesApprovalCount)) * 100) : 0, color: '#C9A227' },
     ],
   };
 }
@@ -418,8 +418,8 @@ async function artistMetrics(employeeId) {
     avgPerformance,
     schedule,
     rings: [
-      ...(avgPerformance !== null ? [{ label: 'Avg Performance', value: Math.max(0, Math.min(100, Math.round(avgPerformance))), color: '#7c6fe8' }] : []),
-      { label: 'Started Ratio', value: activeCount ? Math.round(((activeCount - notStartedCount) / activeCount) * 100) : 0, color: '#4f8cf7' },
+      ...(avgPerformance !== null ? [{ label: 'Avg Performance', value: Math.max(0, Math.min(100, Math.round(avgPerformance))), color: '#4A6329' }] : []),
+      { label: 'Started Ratio', value: activeCount ? Math.round(((activeCount - notStartedCount) / activeCount) * 100) : 0, color: '#C9A227' },
     ],
   };
 }

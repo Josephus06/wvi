@@ -137,6 +137,11 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
     const [lines] = await pool.query(
       `SELECT bpl.*, vb.bill_no, vb.date_created AS vb_date_created, vb.date_due AS vb_date_due, vb.gross_amount AS vb_gross_amount,
               vb.memo AS vb_memo, vb.reference_no AS vb_reference_no,
+              -- The voucher's Description reads the bill's memo, but a bill raised without
+              -- one would otherwise print its bare number. Fall back to the descriptions of
+              -- the bill's own expense lines, which is where the detail actually lives.
+              (SELECT GROUP_CONCAT(NULLIF(TRIM(vbl.description), '') SEPARATOR ', ')
+                 FROM vendor_bill_lines vbl WHERE vbl.vendor_bill_id = vb.id) AS vb_line_descriptions,
               -- What the bill still owed when THIS payment was made, which is what the
               -- Payment Voucher's "Amount Due" column shows. Not stored anywhere, so it is
               -- reconstructed: the bill's gross less whatever earlier, non-voided payments

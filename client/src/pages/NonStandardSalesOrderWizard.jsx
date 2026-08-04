@@ -492,7 +492,7 @@ export default function NonStandardSalesOrderWizard() {
           <div style={{ marginTop: 20 }}>
             <h3>Review your Details and Submit</h3>
             <h4 style={{ marginBottom: 6 }}>Customer and NonStandardSalesOrder Details</h4>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb', marginBottom: 12 }}>{custName(header.customer_id) || '—'}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)', marginBottom: 12 }}>{custName(header.customer_id) || '—'}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, lineHeight: 1.9 }}>
               <div>
                 <div>Contact Title : <span className="hi">{header.contact_title || ''}</span></div>

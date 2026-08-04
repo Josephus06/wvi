@@ -106,7 +106,7 @@ export default function DepositForm() {
           <div style={{ background: '#f1f5f9', borderRadius: 8, padding: '16px 22px', minWidth: 280 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="muted">Total Deposit</span>
-              <span style={{ color: '#2563eb', fontWeight: 700, fontSize: 18 }}>{money(total)}</span>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 18 }}>{money(total)}</span>
             </div>
           </div>
         </div>

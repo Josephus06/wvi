@@ -196,7 +196,7 @@ export function GaugeRing({ value, max = 100, size = 120, thickness = 12, color 
 
 // Horizontal glowing bars, one row per item -- used for Sales by Department / Top
 // Customers, where a label + relative magnitude matters more than precise geometry.
-export function BarList({ data, color = '#a78bfa', formatValue }) {
+export function BarList({ data, color = 'var(--gold)', formatValue }) {
   const max = Math.max(...(data || []).map((d) => num(d.value)), 1);
   if (!data || !data.length) return <p className="muted">No data yet.</p>;
   return (

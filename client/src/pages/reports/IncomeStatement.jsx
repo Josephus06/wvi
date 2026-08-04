@@ -29,7 +29,7 @@ function SectionRows({ sections, columns, onDrill }) {
         {a.amounts.map((v, i) => (
           <td key={i} style={{ textAlign: 'right' }}>
             {v ? (
-              <button type="button" className="link-btn" style={{ color: 'var(--link, #2563eb)', textDecoration: 'underline', cursor: 'pointer' }}
+              <button type="button" className="link-btn" style={{ color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}
                 onClick={() => onDrill(a, columns[i])}>{money(v)}</button>
             ) : money(v)}
             {' '}<span style={{ color: 'var(--muted, #888)', fontSize: '0.85em' }}>({a.percents ? a.percents[i] : 0}%)</span>

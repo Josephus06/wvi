@@ -39,7 +39,7 @@ export default function ChequeView() {
   const totalDebit = gl.reduce((s, l) => s + num(l.debit), 0);
   const totalCredit = gl.reduce((s, l) => s + num(l.credit), 0);
   const T = ({ label, value }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}><span>{label}</span><span style={{ color: '#2563eb' }}>{money(value)}</span></div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}><span>{label}</span><span style={{ color: 'var(--accent)' }}>{money(value)}</span></div>
   );
 
   return (
@@ -85,7 +85,7 @@ export default function ChequeView() {
             <T label="Tax Amount" value={c.tax_amount} />
             <T label="Gross Amount" value={c.gross_amount} />
             <T label="Withholding Tax Amount" value={c.withholding_tax_amount} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 0', fontWeight: 700 }}><span>Total Amount</span><span style={{ color: '#2563eb' }}>{money(c.total_amount)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 0', fontWeight: 700 }}><span>Total Amount</span><span style={{ color: 'var(--accent)' }}>{money(c.total_amount)}</span></div>
           </div>
         </div>
       </div>

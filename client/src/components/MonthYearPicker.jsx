@@ -66,8 +66,8 @@ export default function MonthYearPicker({ value, onChange, placeholder = 'Select
             })}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border,#eee)' }}>
-            <button type="button" className="link-btn" style={{ color: 'var(--link,#2563eb)' }} onClick={() => { onChange(null); setOpen(false); }}>Clear</button>
-            <button type="button" className="link-btn" style={{ color: 'var(--link,#2563eb)' }} onClick={() => { const n = new Date(); onChange({ year: n.getFullYear(), month: n.getMonth() + 1 }); setOpen(false); }}>This month</button>
+            <button type="button" className="link-btn" style={{ color: 'var(--accent)' }} onClick={() => { onChange(null); setOpen(false); }}>Clear</button>
+            <button type="button" className="link-btn" style={{ color: 'var(--accent)' }} onClick={() => { const n = new Date(); onChange({ year: n.getFullYear(), month: n.getMonth() + 1 }); setOpen(false); }}>This month</button>
           </div>
         </div>
       )}

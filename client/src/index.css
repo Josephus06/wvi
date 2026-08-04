@@ -4,9 +4,15 @@
   --bg: #f5f5f7;
   --surface: #ffffff;
   --border: #e2e1e6;
-  --accent: #6d28d9;
-  --accent-hover: #5b21b6;
-  --accent-bg: rgba(109, 40, 217, 0.08);
+  /* Brand palette: moss green carries every interactive surface (it is dark enough for
+     white button text at 6.8:1), golden-yellow is the highlight. Gold is deliberately NOT a
+     text colour on light backgrounds -- #C9A227 on white is only 2.4:1 -- so it is used as a
+     fill, a rule, or as text on the dark banner. */
+  --accent: #4A6329;
+  --accent-hover: #3A4E20;
+  --accent-bg: rgba(74, 99, 41, 0.10);
+  --gold: #C9A227;
+  --gold-bg: rgba(201, 162, 39, 0.14);
   --danger: #dc2626;
   --danger-bg: rgba(220, 38, 38, 0.08);
   --success: #16a34a;
@@ -27,9 +33,11 @@
   --bg: #121218;
   --surface: #1a1a22;
   --border: #2e2d38;
-  --accent: #a78bfa;
-  --accent-hover: #c4b5fd;
-  --accent-bg: rgba(167, 139, 250, 0.12);
+  --accent: #A3C255;
+  --accent-hover: #BBD777;
+  --accent-bg: rgba(163, 194, 85, 0.14);
+  --gold: #E3B93F;
+  --gold-bg: rgba(227, 185, 63, 0.16);
   --danger: #f87171;
   --danger-bg: rgba(248, 113, 113, 0.12);
   --success: #4ade80;
@@ -331,12 +339,12 @@ label {
 .avatar-img { border-radius: 50%; object-fit: cover; display: block; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
 .avatar-fallback {
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #8b7ff0, #4f8cf7); color: #fff; font-weight: 700;
+  background: linear-gradient(135deg, #6B8E3D, #3B5220); color: #fff; font-weight: 700;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 .avatar-edit-btn {
   position: absolute; bottom: -2px; right: -2px; width: 22px; height: 22px; border-radius: 50%;
-  background: #7c6fe8; color: #fff; border: 2px solid #fff; font-size: 11px; line-height: 1;
+  background: #4A6329; color: #fff; border: 2px solid #fff; font-size: 11px; line-height: 1;
   display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
@@ -615,7 +623,7 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
   padding: 12px 18px;
   margin-bottom: 16px;
 }
-.login-field-v2 svg { width: 17px; height: 17px; flex-shrink: 0; color: #3f9c93; }
+.login-field-v2 svg { width: 17px; height: 17px; flex-shrink: 0; color: #4A6329; }
 .login-field-v2 input {
   border: none;
   background: none;
@@ -632,7 +640,7 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
   border-radius: 999px;
   padding: 13px 0;
   margin-top: 8px;
-  background: #4fb8ae;
+  background: #4A6329;
   color: #fff;
   font-weight: 700;
   font-size: 13px;
@@ -641,7 +649,7 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
   cursor: pointer;
   transition: background 0.15s;
 }
-.login-submit-v2:hover { background: #3f9c93; }
+.login-submit-v2:hover { background: #3A4E20; }
 .login-submit-v2:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .login-footer {
@@ -843,14 +851,14 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
 .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 
 .estimate-banner {
-  background: linear-gradient(135deg, #1e3a8a, #1e40af);
+  background: linear-gradient(135deg, #2E3F1C, #55702D);
   color: #fff;
   border-radius: 12px;
   padding: 24px 28px;
 }
 .estimate-banner-title { display: flex; align-items: baseline; gap: 12px; }
 .estimate-banner-title h1 { margin: 0; color: #fff; }
-.estimate-banner .estimate-no { font-size: 15px; opacity: 0.85; }
+.estimate-banner .estimate-no { font-size: 15px; opacity: 1; color: var(--gold); font-weight: 600; }
 .estimate-status { margin-top: 4px; font-size: 14px; opacity: 0.85; display: flex; align-items: center; gap: 10px; }
 .estimate-so-link {
   background: rgba(255, 255, 255, 0.15);
@@ -1033,7 +1041,7 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
   line-height: 1.6;
 }
 .print-letterhead { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.print-logo { font-size: 28px; font-weight: 800; color: #6d28d9; }
+.print-logo { font-size: 28px; font-weight: 800; color: #2E3F1C; }
 .print-company-address { text-align: right; color: #444; }
 .print-title { text-align: center; font-size: 20px; margin: 8px 0 28px; color: #222; }
 .print-info-grid { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
@@ -1135,10 +1143,12 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
    ===================================================================== */
 .holo-dashboard {
   --dash-bg: #f2f3fa;
-  --dash-purple: #7c6fe8;
-  --dash-blue: #4f8cf7;
-  --dash-green: #22c39e;
-  --dash-lime: #9fc93a;
+  /* Historical names -- these are the four brand shades now (moss, light moss, gold,
+     midnight green), not the colours they are named after. */
+  --dash-purple: #4A6329;
+  --dash-blue: #86A44C;
+  --dash-green: #C9A227;
+  --dash-lime: #3E8577;
   --dash-text: #2b2d42;
   --dash-text-dim: #8a8da8;
   --dash-border: rgba(43, 45, 66, 0.08);
@@ -1185,8 +1195,8 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  background: rgba(124, 111, 232, 0.12);
-  border: 1px solid rgba(124, 111, 232, 0.25);
+  background: rgba(74, 99, 41, 0.12);
+  border: 1px solid rgba(74, 99, 41, 0.28);
   color: var(--dash-purple);
 }
 
@@ -1224,10 +1234,10 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
 /* Solid-color "icon stat" cards -- tone-purple/blue/green/lime cycle across each
    dashboard's top row, matching the reference dashboard's 4-color palette. */
 .holo-stat-card { display: flex; flex-direction: column; gap: 10px; color: #fff; border: none; }
-.holo-stat-card.tone-purple { background: linear-gradient(135deg, #8f83f3, #6a5ce0); }
-.holo-stat-card.tone-blue { background: linear-gradient(135deg, #5b9df9, #3f74e6); }
-.holo-stat-card.tone-green { background: linear-gradient(135deg, #2bd1ab, #16a889); }
-.holo-stat-card.tone-lime { background: linear-gradient(135deg, #c3e05a, #96c22e); }
+.holo-stat-card.tone-purple { background: linear-gradient(135deg, #5C7A33, #3B5220); }
+.holo-stat-card.tone-blue { background: linear-gradient(135deg, #86A44C, #5F7F2F); }
+.holo-stat-card.tone-green { background: linear-gradient(135deg, #D9B23C, #B0871A); }
+.holo-stat-card.tone-lime { background: linear-gradient(135deg, #3E8577, #24594F); }
 .holo-stat-card:hover { box-shadow: 0 16px 32px rgba(43, 45, 66, 0.22); }
 .holo-stat-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .holo-stat-label { font-size: 12px; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.05em; }

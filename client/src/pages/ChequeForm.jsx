@@ -79,7 +79,7 @@ export default function ChequeForm() {
   if (loading || !meta) return <LoadingSpinner />;
   const TotalsRow = ({ label, value }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px dashed var(--border)' }}>
-      <span className="muted">{label}</span><span style={{ color: '#2563eb' }}>{money(value)}</span>
+      <span className="muted">{label}</span><span style={{ color: 'var(--accent)' }}>{money(value)}</span>
     </div>
   );
 
@@ -144,7 +144,7 @@ export default function ChequeForm() {
             <TotalsRow label="Withholding Tax Amount" value={totals.wtax} />
             <TotalsRow label="Gross Amount" value={totals.gross} />
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 0', fontWeight: 700 }}>
-              <span>Total Amount</span><span style={{ color: '#2563eb' }}>{money(totals.total)}</span>
+              <span>Total Amount</span><span style={{ color: 'var(--accent)' }}>{money(totals.total)}</span>
             </div>
           </div>
         </div>

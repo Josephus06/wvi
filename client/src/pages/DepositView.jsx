@@ -68,7 +68,7 @@ export default function DepositView() {
             <div>Memo : <span className="hi">{d.memo || ''}</span></div>
           </div>
           <div style={{ background: '#fff', color: '#0f172a', borderRadius: 8, padding: '14px 20px', minWidth: 260 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Deposit</span><span style={{ color: '#2563eb', fontWeight: 700 }}>{money(d.total_amount)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Deposit</span><span style={{ color: 'var(--accent)', fontWeight: 700 }}>{money(d.total_amount)}</span></div>
           </div>
         </div>
       </div>
