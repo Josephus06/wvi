@@ -1053,7 +1053,15 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
 .print-bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin: 6px 0; }
 /* Payment Voucher (Bill Payment print-out). Reuses the estimate print sheet; these cover the
    bordered applied-bills table and the right-aligned total the voucher format uses. */
-.print-logo-img { max-height: 64px; max-width: 320px; object-fit: contain; }
+.print-logo-img { height: 56px; max-width: 340px; object-fit: contain; object-position: left center; }
+/* Label and value on one row, so "Date : Aug 04, 2026" cannot break across lines the way a
+   plain flex column does. The label column is sized to the longest label. */
+.voucher-fields { display: grid; grid-template-columns: max-content 1fr; gap: 6px 10px; align-content: start; }
+.voucher-fields dt { font-weight: 600; color: #222; white-space: nowrap; }
+.voucher-fields dd { margin: 0; color: #333; }
+.voucher-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; margin-bottom: 28px; align-items: start; }
+.voucher-sheet .print-signatures { border-top: 1px solid #e0e0e0; padding-top: 14px; }
+.voucher-sheet .print-signatures > div { border-top: 1px solid #999; margin: 44px 12px 0; padding-top: 6px; font-size: 12px; }
 .print-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
 .print-table th, .print-table td { border: 1px solid #d0d0d0; padding: 8px 10px; font-size: 12px; text-align: left; }
 .print-table th { color: #444; font-weight: 600; background: #fafafa; }
@@ -1105,9 +1113,13 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
 }
 
 @media print {
-  .topnav, .print-toolbar { display: none !important; }
+  .topnav, .print-toolbar, .chat-widget { display: none !important; }
   .content { padding: 0 !important; }
   .print-sheet { box-shadow: none; max-width: none; }
+  /* The voucher is a one-page hand-out: let the sheet fill the page so the sign-off strip
+     can sit at the bottom of the sheet rather than floating under the table. */
+  .voucher-sheet { min-height: 96vh; display: flex; flex-direction: column; }
+  .voucher-sheet .print-signatures { margin-top: auto; }
 }
 
 /* =====================================================================

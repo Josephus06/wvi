@@ -221,7 +221,9 @@ export default function ChatWidget() {
   ];
 
   return (
-    <div ref={wrapRef} style={{ position: 'fixed', right: anchor.right, bottom: anchor.bottom, zIndex: 200 }}>
+    // chat-widget is what @media print hides -- the launcher is fixed-position, so without it
+    // the mascot prints on top of every document.
+    <div ref={wrapRef} className="chat-widget" style={{ position: 'fixed', right: anchor.right, bottom: anchor.bottom, zIndex: 200 }}>
       {open && (
         <div className="card" style={{ width: 320, height: 420, display: 'flex', flexDirection: 'column', marginBottom: 10, padding: 0, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
           <div style={{ background: 'var(--accent)', color: '#fff', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

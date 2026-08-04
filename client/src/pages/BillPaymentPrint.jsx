@@ -45,13 +45,14 @@ export default function BillPaymentPrint() {
         <button className="btn btn-primary" onClick={() => window.print()}>Print</button>
       </div>
 
-      <div className="print-sheet">
+      <div className="print-sheet voucher-sheet">
         <div className="print-letterhead">
-          {/* Drop the company logo in as client/public/company-logo.png. Falling back to the
-              name keeps the voucher usable (and printable) when no logo file is present. */}
-          {logoOk
-            ? <img src="/company-logo.png" alt={COMPANY.name} className="print-logo-img" onError={() => setLogoOk(false)} />
-            : <div className="print-logo">{COMPANY.name}</div>}
+          {/* The company logo lives at client/public/company-logo.png. If it is ever missing
+              the letterhead simply carries the address block -- no placeholder text, which
+              would otherwise print in the app's accent colour. */}
+          {logoOk && (
+            <img src="/company-logo.png" alt={COMPANY.name} className="print-logo-img" onError={() => setLogoOk(false)} />
+          )}
           <div className="print-company-address">
             <strong>{COMPANY.name}</strong><br />
             {COMPANY.addressLine1}{COMPANY.addressLine1 && <br />}
@@ -63,19 +64,19 @@ export default function BillPaymentPrint() {
 
         <h2 className="print-title">Payment Voucher</h2>
 
-        <div className="print-info-grid">
-          <div>
-            <div><strong>Date :</strong> {longDate(bp.date_created)}</div>
-            <div><strong>Paid To :</strong> {bp.supplier_name || ''}</div>
-            <div><strong>Payee Name :</strong> {bp.payee_name || bp.supplier_name || ''}</div>
-            <div><strong>Memo :</strong> {bp.memo || ''}</div>
-          </div>
-          <div>
+        <div className="voucher-grid">
+          <dl className="voucher-fields">
+            <dt>Date :</dt><dd>{longDate(bp.date_created)}</dd>
+            <dt>Paid To :</dt><dd>{bp.supplier_name || ''}</dd>
+            <dt>Payee Name :</dt><dd>{bp.payee_name || bp.supplier_name || ''}</dd>
+            <dt>Memo :</dt><dd>{bp.memo || ''}</dd>
+          </dl>
+          <dl className="voucher-fields">
             {/* The cheque number identifies the payment when one was issued; otherwise the
                 operator's reference, and failing both the voucher's own number. */}
-            <div><strong>Ref # :</strong> {bp.check_no || bp.reference_no || bp.bill_payment_no}</div>
-            <div><strong>Amount in words :</strong> {amountInWords(total)}</div>
-          </div>
+            <dt>Ref # :</dt><dd>{bp.check_no || bp.reference_no || bp.bill_payment_no}</dd>
+            <dt>Amount in words :</dt><dd>{amountInWords(total)}</dd>
+          </dl>
         </div>
 
         <table className="print-table">
