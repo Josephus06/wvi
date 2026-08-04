@@ -1051,6 +1051,14 @@ button.progress-bar:disabled { cursor: not-allowed; opacity: 0.6; }
 .print-terms h4 { margin: 16px 0 6px; color: #222; }
 .print-indent { margin-left: 16px; }
 .print-bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin: 6px 0; }
+/* Payment Voucher (Bill Payment print-out). Reuses the estimate print sheet; these cover the
+   bordered applied-bills table and the right-aligned total the voucher format uses. */
+.print-logo-img { max-height: 64px; max-width: 320px; object-fit: contain; }
+.print-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.print-table th, .print-table td { border: 1px solid #d0d0d0; padding: 8px 10px; font-size: 12px; text-align: left; }
+.print-table th { color: #444; font-weight: 600; background: #fafafa; }
+.print-table .num { text-align: right; }
+.print-voucher-total { text-align: right; margin: 24px 0 8px; font-size: 13px; }
 .print-signatures { display: flex; justify-content: space-between; gap: 24px; margin-top: 48px; text-align: center; }
 .print-signatures > div { flex: 1; }
 .print-sig-label { font-weight: 600; margin-bottom: 32px; }

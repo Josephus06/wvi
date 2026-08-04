@@ -136,6 +136,19 @@ router.get('/:id', requireAuth, requirePermission(ROUTE, 'can_view'), async (req
 
     const [lines] = await pool.query(
       `SELECT bpl.*, vb.bill_no, vb.date_created AS vb_date_created, vb.date_due AS vb_date_due, vb.gross_amount AS vb_gross_amount,
+              vb.memo AS vb_memo, vb.reference_no AS vb_reference_no,
+              -- What the bill still owed when THIS payment was made, which is what the
+              -- Payment Voucher's "Amount Due" column shows. Not stored anywhere, so it is
+              -- reconstructed: the bill's gross less whatever earlier, non-voided payments
+              -- had already applied to it.
+              (vb.gross_amount - COALESCE((
+                 SELECT SUM(pl2.applied_amount)
+                 FROM bill_payment_lines pl2
+                 JOIN bill_payments bp2 ON bp2.id = pl2.bill_payment_id
+                 WHERE pl2.vendor_bill_id = bpl.vendor_bill_id
+                   AND bp2.status <> 'voided'
+                   AND pl2.bill_payment_id < bpl.bill_payment_id
+               ), 0)) AS amount_due_before,
               bc.bill_credit_no
        FROM bill_payment_lines bpl
        LEFT JOIN vendor_bills vb ON vb.id = bpl.vendor_bill_id
