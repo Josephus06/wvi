@@ -22,7 +22,7 @@ function money(v) {
 export default function InventoryView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
 
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,8 +127,13 @@ export default function InventoryView() {
 
   const costingReady = Number(item.selling_price) > 0;
   const accountingReady = !!(item.asset_account_id && item.cogs_account_id && item.income_account_id);
-  const showApproveCosting = canApprove && item.is_active && !item.is_costing_approved && costingReady;
-  const showApproveAccounting = canApprove && item.is_active && !item.is_accounting_approved && accountingReady;
+  // A System Admin always gets the approve buttons, even on an item that is not ready. The
+  // readiness rules are there to stop ordinary approvers waving through half-configured
+  // items, not to lock out the person who has to unstick them. The server allows the same
+  // override and records it in the audit log.
+  const isSystemAdmin = user?.account_type === 'System Admin';
+  const showApproveCosting = canApprove && item.is_active && !item.is_costing_approved && (costingReady || isSystemAdmin);
+  const showApproveAccounting = canApprove && item.is_active && !item.is_accounting_approved && (accountingReady || isSystemAdmin);
   const fullyApproved = item.is_costing_approved && item.is_accounting_approved;
 
   return (
@@ -139,8 +144,18 @@ export default function InventoryView() {
           <button className="btn btn-sm" onClick={() => navigate('/inventory')}>Back to Lists</button>
           {canEdit && <button className="btn btn-sm btn-primary" onClick={() => navigate(`/inventory/${id}/edit`)}>Edit</button>}
           {canAdd && <button className="btn btn-sm" onClick={() => navigate('/inventory/new')}>Add New</button>}
-          {showApproveCosting && <button className="btn btn-sm btn-primary" disabled={approving} onClick={handleApproveCosting}>Approve Costing</button>}
-          {showApproveAccounting && <button className="btn btn-sm btn-primary" disabled={approving} onClick={handleApproveAccounting}>Approve Accounting</button>}
+          {showApproveCosting && (
+            <button className="btn btn-sm btn-primary" disabled={approving} onClick={handleApproveCosting}
+              title={costingReady ? undefined : 'Selling Price is not set — approving as System Admin overrides that, and the override is recorded.'}>
+              Approve Costing{costingReady ? '' : ' *'}
+            </button>
+          )}
+          {showApproveAccounting && (
+            <button className="btn btn-sm btn-primary" disabled={approving} onClick={handleApproveAccounting}
+              title={accountingReady ? undefined : 'Asset / COGS / Income accounts are not all set — approving as System Admin overrides that, and the override is recorded.'}>
+              Approve Accounting{accountingReady ? '' : ' *'}
+            </button>
+          )}
         </div>
       </div>
 

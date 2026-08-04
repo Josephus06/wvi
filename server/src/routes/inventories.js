@@ -215,13 +215,27 @@ router.put('/:id', requireAuth, requirePermission(ROUTE, 'can_edit'), async (req
 });
 
 // Costing can only be approved once Sales/Pricing has actually been filled in.
+// A System Admin can approve an item whose prerequisites are not met -- the readiness rules
+// exist to stop ordinary approvers waving through half-configured items, not to lock out the
+// person responsible for fixing them. The JWT carries no account_type, so it is read here.
+//
+// The override is deliberately recorded in the audit log: approving costing with no selling
+// price, or accounting with no asset/COGS/income accounts, has real downstream consequences,
+// so the trail has to show it was forced and by whom.
+async function isSystemAdmin(userId) {
+  const [[row]] = await pool.query('SELECT account_type FROM users WHERE id = ?', [userId]);
+  return row?.account_type === 'System Admin';
+}
+
 router.put('/:id/approve-costing', requireAuth, requirePermission(ROUTE, 'can_approve'), async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
     const [[item]] = await conn.query('SELECT * FROM inventories WHERE id = ?', [req.params.id]);
     if (!item) { conn.release(); return res.status(404).json({ error: 'Not found' }); }
     if (item.is_costing_approved) { conn.release(); return res.status(400).json({ error: 'Costing is already approved.' }); }
-    if (item.selling_price === null || item.selling_price === undefined || Number(item.selling_price) <= 0) {
+    const costingReady = !(item.selling_price === null || item.selling_price === undefined || Number(item.selling_price) <= 0);
+    const costingOverride = !costingReady && await isSystemAdmin(req.user.id);
+    if (!costingReady && !costingOverride) {
       conn.release();
       return res.status(400).json({ error: 'Sales/Pricing must be filled in (Selling Price) before costing can be approved.' });
     }
@@ -231,7 +245,11 @@ router.put('/:id/approve-costing', requireAuth, requirePermission(ROUTE, 'can_ap
       'UPDATE inventories SET is_costing_approved = TRUE, costing_approved_at = NOW(), costing_approved_by = ? WHERE id = ?',
       [req.user.id, req.params.id]
     );
-    await logAudit(conn, { inventoryId: req.params.id, userId: req.user.id, eventType: 'Approved', fieldName: 'is_costing_approved', oldValue: '0', newValue: '1' });
+    await logAudit(conn, {
+      inventoryId: req.params.id, userId: req.user.id, eventType: 'Approved',
+      fieldName: costingOverride ? 'is_costing_approved (admin override -- no selling price)' : 'is_costing_approved',
+      oldValue: '0', newValue: '1',
+    });
     await conn.commit();
 
     const [[row]] = await pool.query('SELECT * FROM inventories WHERE id = ?', [req.params.id]);
@@ -253,7 +271,9 @@ router.put('/:id/approve-accounting', requireAuth, requirePermission(ROUTE, 'can
     if (item.is_accounting_approved) { conn.release(); return res.status(400).json({ error: 'Accounting is already approved.' }); }
     // Expense is commonly left blank even on real Approved items -- Asset/COGS/Income
     // are the three that actually gate approval (see schema.sql's cogs_account_id note).
-    if (!item.asset_account_id || !item.cogs_account_id || !item.income_account_id) {
+    const accountingReady = !!(item.asset_account_id && item.cogs_account_id && item.income_account_id);
+    const accountingOverride = !accountingReady && await isSystemAdmin(req.user.id);
+    if (!accountingReady && !accountingOverride) {
       conn.release();
       return res.status(400).json({ error: 'Asset, COGS, and Income accounts must all be set before accounting can be approved.' });
     }
@@ -263,7 +283,11 @@ router.put('/:id/approve-accounting', requireAuth, requirePermission(ROUTE, 'can
       'UPDATE inventories SET is_accounting_approved = TRUE, accounting_approved_at = NOW(), accounting_approved_by = ? WHERE id = ?',
       [req.user.id, req.params.id]
     );
-    await logAudit(conn, { inventoryId: req.params.id, userId: req.user.id, eventType: 'Approved', fieldName: 'is_accounting_approved', oldValue: '0', newValue: '1' });
+    await logAudit(conn, {
+      inventoryId: req.params.id, userId: req.user.id, eventType: 'Approved',
+      fieldName: accountingOverride ? 'is_accounting_approved (admin override -- accounts incomplete)' : 'is_accounting_approved',
+      oldValue: '0', newValue: '1',
+    });
     await conn.commit();
 
     const [[row]] = await pool.query('SELECT * FROM inventories WHERE id = ?', [req.params.id]);
